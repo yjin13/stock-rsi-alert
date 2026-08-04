@@ -2,7 +2,7 @@ name: Telegram 24H Full-Market (KR/US Pre & After) RSI Scanner
 
 on:
   schedule:
-    # 평일(월~금) 24시간 내내 10분마다 실행 (API 차단 방지 및 4시간봉 최적화)
+    # 평일(월~금) 24시간 내내 30분마다 실행 (API 차단 방지 및 4시간봉 최적화)
     - cron: '*/30 * * * 1-5'
   workflow_dispatch: # 수동 실행 버튼
 
