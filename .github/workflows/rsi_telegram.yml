@@ -15,10 +15,10 @@ jobs:
       contents: write  # 로그 기록 자동 커밋 권한
     steps:
       - name: 저장소 코드 불러오기
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 파이썬 3.10 설정
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10'
 
