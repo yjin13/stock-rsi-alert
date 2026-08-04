@@ -30,7 +30,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python rsi_kr_us_bot.py
 
-      - name: 실행 로그 및 마감 상태 파일 업데이트 + 60일 휴면 방지 자동 커밋
+      - name: 실행 날짜 및 로그 업데이트 + 60일 휴면 방지 자동 커밋
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions@github.com"
@@ -40,7 +40,6 @@ jobs:
           
           tail -n 200 execution_log.txt > temp_log.txt && mv temp_log.txt execution_log.txt
           
-          # 로그 파일과 일일 마감 상태 파일(JSON)을 함께 Commit & Push
           git add execution_log.txt daily_summary_state.json
           git commit -m "log: update daily scan status ($KST_TIME)" || exit 0
           git push || exit 0
