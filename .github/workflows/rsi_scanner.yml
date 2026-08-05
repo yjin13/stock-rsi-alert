@@ -2,9 +2,9 @@ name: 🌐 Telegram KR & US Market RSI Scanner
 
 on:
   schedule:
-    # 🧪 [테스트 중] 30분마다 한/미 스캐너 동시 실행 (테스트 끝나면 '0 * * * *' 로 변경하시면 됩니다)
-    - cron: '*/30 * * * *'
-  workflow_dispatch: # 수동 테스트 실행 버튼
+    # 매시 정각(0분)마다 한/미 스캐너 실행
+    - cron: '0 * * * *'
+  workflow_dispatch: # 체크박스 없이 일반 수동 실행 지원
 
 jobs:
   run-dual-scanner:
@@ -45,7 +45,6 @@ jobs:
           echo "[$KST_TIME] 🌐 한국/미국 RSI 스캔 완료" >> scanner_log.txt
           tail -n 100 scanner_log.txt > temp_log.txt && mv temp_log.txt scanner_log.txt
           
-          # 생성된 로그 및 JSON 상태 파일(kr_state.json, us_state.json 등) 전체 업데이트
           git add -A
           git commit -m "log: update KR & US scan status ($KST_TIME)" || exit 0
           git push || exit 0
