@@ -2,8 +2,8 @@ name: 🌐 Telegram KR & US Market RSI Scanner
 
 on:
   schedule:
-    # 매시 정각(0분)마다 한/미 스캐너 실행
-    - cron: '0 * * * *'
+    # 매시 정각(15분)마다 한/미 스캐너 실행
+    - cron: '15 * * * *'
   workflow_dispatch: # 체크박스 없이 일반 수동 실행 지원
 
 jobs:
