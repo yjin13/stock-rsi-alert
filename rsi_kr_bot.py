@@ -138,8 +138,35 @@ class KoreaRSIBot:
         requests.post(self.api_url, data=payload)
         print("  └─> [한국장 일일 마감 보고 전송 완료]")
 
+    def calc_tradingview_rsi(self, close_series, period=14):
+        """💡 트레이딩뷰 Pine Script(Wilder's RMA)와 수학적으로 100% 동일한 RSI 알고리즘"""
+        closes = close_series.tolist()
+        if len(closes) < period + 5:
+            return None
+            
+        gains = []
+        losses = []
+        for i in range(1, len(closes)):
+            delta = closes[i] - closes[i - 1]
+            gains.append(max(0.0, delta))
+            losses.append(max(0.0, -delta))
+            
+        # 1. 첫 14개 캔들의 단순평균(SMA)으로 시드(Seed) 초기값 설정
+        avg_gain = sum(gains[:period]) / period
+        avg_loss = sum(losses[:period]) / period
+        
+        # 2. 15번째 캔들부터 Wilder's Smoothing 적용: (이전값 * 13 + 현재값) / 14
+        for i in range(period, len(gains)):
+            avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+            avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+            
+        if avg_loss == 0:
+            return 100.0
+        rs = avg_gain / avg_loss
+        return float(100.0 - (100.0 / (1.0 + rs)))
+
     def fetch_kr_4h_rsi(self, code, period=14):
-        url = f"https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=60&count=300&requestType=1"
+        url = f"https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=60&count=500&requestType=1"
         res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
         if res.status_code != 200:
             return None, None
@@ -151,7 +178,7 @@ class KoreaRSIBot:
             dt = pd.to_datetime(raw[0], format="%Y%m%d%H%M%S")
             data.append([dt, int(raw[1]), int(raw[2]), int(raw[3]), int(raw[4]), int(raw[5])])
             
-        if len(data) < 30:
+        if len(data) < 50:
             return None, None
             
         df = pd.DataFrame(data, columns=["datetime", "open", "high", "low", "close", "volume"]).set_index("datetime")
@@ -159,14 +186,10 @@ class KoreaRSIBot:
             "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"
         }).dropna()
         
-        delta = df_4h["close"].diff()
-        gain = delta.where(delta > 0, 0.0)
-        loss = -delta.where(delta < 0, 0.0)
-        avg_gain = gain.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
-        avg_loss = loss.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
-        rs = avg_gain / (avg_loss + 1e-10)
-        df_4h["RSI"] = 100 - (100 / (1 + rs))
-        return float(df_4h["RSI"].iloc[-1]), float(df_4h["close"].iloc[-1])
+        rsi_val = self.calc_tradingview_rsi(df_4h["close"], period)
+        if rsi_val is None:
+            return None, None
+        return rsi_val, float(df_4h["close"].iloc[-1])
 
     def run(self):
         kst_now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
@@ -176,7 +199,6 @@ class KoreaRSIBot:
         
         print(f" [🇰🇷 한국장 스캐너 실행] KST 시간: {check_time_str} (UTC {utc_hour}시)")
 
-        # 🟢 한국장 거래 시간대에 실행 시: 상위 30개 정기 리포트 발송 + 30 이하 과대낙폭 감시
         if utc_hour == 23 or 0 <= utc_hour <= 11:
             kr_stocks = self.get_kr_top100()
             top30_results = []
@@ -185,22 +207,18 @@ class KoreaRSIBot:
                 try:
                     rsi, close_p = self.fetch_kr_4h_rsi(code)
                     if rsi:
-                        # 상위 30개 종목 리스트 수집
                         if len(top30_results) < 30:
                             top30_results.append((name, code, rsi, close_p))
                         
-                        # 4H RSI 30 이하 시 즉시 과대낙폭 경보 발송
                         if rsi <= 30.0:
                             self.send_telegram_alert(name, code, rsi, close_p, check_time_str)
                     time.sleep(0.05)
                 except Exception:
                     continue
             
-            # 상위 30개 종목 정리 리포트 전송
             if top30_results:
                 self.send_top30_summary(top30_results, check_time_str)
             
-            # 장 마감 시간 보고
             if utc_hour in [11, 12] and not self.state["summary_sent"]:
                 if not self.state["signal_found"]:
                     self.send_daily_summary(date_str)
