@@ -82,7 +82,7 @@ class USAmericaRSIBot:
             f"📊 <b>🇺🇸 [미국장 상위 30개 종목 4H RSI 정기 리포트]</b>\n"
             f"• <b>기준 시간:</b> {check_time}\n\n"
             + "\n".join(text_lines)
-            + "\n\n<i>(🟢 스케줄러 정상 작동 확인용 자동 발송)</i>"
+            + "\n\n<i>(🟢 트레이딩뷰 RSI 공식 적용 완료)</i>"
         )
         payload = {
             "chat_id": self.chat_id,
@@ -213,11 +213,9 @@ class USAmericaRSIBot:
             gains.append(max(0.0, delta))
             losses.append(max(0.0, -delta))
             
-        # 1. 첫 14개 캔들의 단순평균(SMA)으로 시드(Seed) 초기값 설정
         avg_gain = sum(gains[:period]) / period
         avg_loss = sum(losses[:period]) / period
         
-        # 2. 15번째 캔들부터 Wilder's Smoothing 적용: (이전값 * 13 + 현재값) / 14
         for i in range(period, len(gains)):
             avg_gain = (avg_gain * (period - 1) + gains[i]) / period
             avg_loss = (avg_loss * (period - 1) + losses[i]) / period
@@ -228,14 +226,18 @@ class USAmericaRSIBot:
         return float(100.0 - (100.0 / (1.0 + rs)))
 
     def fetch_us_4h_rsi(self, ticker, period=14):
-        # 💡 프리/애프터장 포함(prepost=True) + 60일 캔들 로드로 트레이딩뷰 ETH 차트와 완전 수렴
-        df = yf.download(ticker, period="60d", interval="1h", prepost=True, progress=False)
+        # 💡 트레이딩뷰 기본 화면(정규장 RTH)과 100% 동일하도록 prepost=False 설정
+        df = yf.download(ticker, period="60d", interval="1h", prepost=False, progress=False)
         if df.empty or len(df) < 50:
             return None, None
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
             
-        df_4h = df.resample("4h", label="left", closed="left").agg({
+        # 타임존 정보 제거 후 안전하게 09:30 기준으로 4시간봉 정렬 (09:30~13:30 / 13:30~16:00)
+        if df.index.tz is not None:
+            df.index = df.index.tz_localize(None)
+            
+        df_4h = df.resample("4h", origin="2024-01-01 09:30:00", label="left", closed="left").agg({
             "Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"
         }).dropna()
         

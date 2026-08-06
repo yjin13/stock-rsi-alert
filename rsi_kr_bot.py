@@ -107,7 +107,7 @@ class KoreaRSIBot:
             f"📊 <b>🇰🇷 [한국장 상위 30개 종목 4H RSI 정기 리포트]</b>\n"
             f"• <b>기준 시간:</b> {check_time}\n\n"
             + "\n".join(text_lines)
-            + "\n\n<i>(🟢 스케줄러 정상 작동 확인용 자동 발송)</i>"
+            + "\n\n<i>(🟢 트레이딩뷰 RSI 공식 적용 완료)</i>"
         )
         payload = {
             "chat_id": self.chat_id,
@@ -151,11 +151,9 @@ class KoreaRSIBot:
             gains.append(max(0.0, delta))
             losses.append(max(0.0, -delta))
             
-        # 1. 첫 14개 캔들의 단순평균(SMA)으로 시드(Seed) 초기값 설정
         avg_gain = sum(gains[:period]) / period
         avg_loss = sum(losses[:period]) / period
         
-        # 2. 15번째 캔들부터 Wilder's Smoothing 적용: (이전값 * 13 + 현재값) / 14
         for i in range(period, len(gains)):
             avg_gain = (avg_gain * (period - 1) + gains[i]) / period
             avg_loss = (avg_loss * (period - 1) + losses[i]) / period
@@ -182,7 +180,9 @@ class KoreaRSIBot:
             return None, None
             
         df = pd.DataFrame(data, columns=["datetime", "open", "high", "low", "close", "volume"]).set_index("datetime")
-        df_4h = df.resample("4h", label="left", closed="left").agg({
+        
+        # 💡 트레이딩뷰 한국장 캔들과 똑같이 오전 09:00 기준으로 4시간봉 정렬 (09:00~13:00 / 13:00~15:30)
+        df_4h = df.resample("4h", origin="2024-01-01 09:00:00", label="left", closed="left").agg({
             "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"
         }).dropna()
         
