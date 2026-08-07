@@ -24,7 +24,7 @@ class USAmericaRSIBot:
 
     def load_state(self):
         session_date = self.get_session_date()
-        default_state = {"date": session_date, "signal_found": False, "summary_sent": False}
+        default_state = {"date": session_date, "signal_count": 0, "summary_sent": False}
         
         if os.path.exists(STATE_FILE):
             try:
@@ -46,7 +46,8 @@ class USAmericaRSIBot:
 
     def send_telegram_alert(self, name, ticker, rsi_val, close_p, check_time):
         url_link = f"https://finance.yahoo.com/quote/{ticker}"
-        self.state["signal_found"] = True
+        # 💡 신호 발생 건수 누적 카운트
+        self.state["signal_count"] = self.state.get("signal_count", 0) + 1
         self.save_state()
 
         message = (
@@ -84,14 +85,20 @@ class USAmericaRSIBot:
         })
         print("  └─> [미국장 상위 30개 정기 리포트 전송 완료]")
 
-    def send_daily_summary(self, date_str):
+    def send_daily_summary(self, date_str, signal_count):
         self.state["summary_sent"] = True
         self.save_state()
+
+        # 💡 과대낙폭 발생 여부와 무관하게 건수를 명확히 표기하여 100% 장마감 알림 발송
+        if signal_count == 0:
+            result_text = "밤사이 미국장 마감까지 <b>4시간봉 RSI 30 이하</b> 과대낙폭 종목이 <b>발견되지 않았습니다.</b>"
+        else:
+            result_text = f"밤사이 미국장 마감까지 <b>4시간봉 RSI 30 이하</b> 과대낙폭 신호가 <b>총 {signal_count}건</b> 감지되었습니다."
 
         message = (
             f"📈 <b>🇺🇸 [미국장 일일 마감 보고]</b>\n\n"
             f"• <b>기준 날짜:</b> {date_str} (오버나이트 세션)\n"
-            f"• <b>스캔 결과:</b> 밤사이 미국장 마감까지 <b>4시간봉 RSI 30 이하</b> 과대낙폭 종목이 <b>발견되지 않았습니다.</b>\n\n"
+            f"• <b>스캔 결과:</b> {result_text}\n\n"
             f"<i>(🟢 미국장 스캐너 정상 작동 중 · 다음 장에서 뵙겠습니다)</i>"
         )
         requests.post(self.api_url, data={
@@ -103,12 +110,7 @@ class USAmericaRSIBot:
         print("  └─> [미국장 일일 마감 보고 전송 완료]")
 
     def get_us_top100(self):
-        """
-        💡 지수/섹터 레버리지 + 기술주/소비재/금융/헬스케어 등 미국 시총 최상위 70개 블루칩
-        🚨 단일 종목 레버리지 ETF 및 인버스 ETF 원천 배제
-        """
         return {
-            # --- [핵심 지수 및 섹터 레버리지 ETF (1~3배)] ---
             "SPY": "S&P 500 ETF",
             "QQQ": "나스닥 100 ETF",
             "DIA": "다우존스 ETF",
@@ -123,8 +125,6 @@ class USAmericaRSIBot:
             "XLK": "기술주 섹터 (XLK)",
             "TLT": "미국 20년물 국채 ETF",
             "TMF": "미국 20년물 국채 3배 (TMF)",
-            
-            # --- [시가총액 상위 7대 빅테크 및 성장주] ---
             "AAPL": "애플",
             "NVDA": "엔비디아",
             "MSFT": "마이크로소프트",
@@ -132,8 +132,6 @@ class USAmericaRSIBot:
             "AMZN": "아마존",
             "META": "메타",
             "TSLA": "테슬라",
-            
-            # --- [반도체 & 핵심 IT 주도주] ---
             "AVGO": "브로드컴",
             "TSM": "TSMC",
             "AMD": "AMD",
@@ -148,8 +146,6 @@ class USAmericaRSIBot:
             "CRWD": "크라우드스트라이크",
             "SNOW": "스노우플레이크",
             "PANW": "팔로알토",
-            
-            # --- [소비재 & 유통 & 엔터 시총 상위주 (나이키 포함)] ---
             "NKE": "나이키",
             "WMT": "월마트",
             "COST": "코스트코",
@@ -159,13 +155,9 @@ class USAmericaRSIBot:
             "DIS": "디즈니",
             "NFLX": "넷플릭스",
             "UBER": "우버",
-            
-            # --- [필수소비재 & 음료 주도주] ---
             "PG": "프록터앤드갬블(P&G)",
             "KO": "코카콜라",
             "PEP": "펩시코",
-            
-            # --- [금융 & 결제 시총 최상위 블루칩] ---
             "BRK-B": "버크셔 해서웨이",
             "JPM": "JP모건 체이스",
             "BAC": "뱅크오브아메리카",
@@ -174,15 +166,11 @@ class USAmericaRSIBot:
             "SOFI": "소파이",
             "COIN": "코인베이스",
             "MSTR": "마이크로스트래티지",
-            
-            # --- [헬스케어 & 제약 시총 상위주] ---
             "LLY": "일라이릴리",
             "UNH": "유나이티드헬스",
             "JNJ": "존슨앤드존슨",
             "MRK": "머크",
             "ABBV": "애브비",
-            
-            # --- [에너지 & 산업재 주도주] ---
             "XOM": "엑슨모빌",
             "CVX": "쉐브론",
             "GE": "제너럴 일렉트릭",
@@ -190,7 +178,6 @@ class USAmericaRSIBot:
         }
 
     def calc_tradingview_rsi(self, close_series, period=14):
-        """💡 트레이딩뷰 Pine Script(Wilder's RMA) 공식과 100% 동일한 RSI 계산 알고리즘"""
         closes = close_series.tolist()
         if len(closes) < period + 5:
             return None
@@ -214,7 +201,6 @@ class USAmericaRSIBot:
         return float(100.0 - (100.0 / (1.0 + rs)))
 
     def fetch_us_4h_rsi(self, ticker, period=14):
-        # 트레이딩뷰 기본 화면(정규장 RTH)과 100% 동일하도록 prepost=False 설정
         df = yf.download(ticker, period="60d", interval="1h", prepost=False, progress=False)
         if df.empty or len(df) < 50:
             return None, None
@@ -224,7 +210,6 @@ class USAmericaRSIBot:
         if df.index.tz is not None:
             df.index = df.index.tz_localize(None)
             
-        # 미국장 오전 09:30 기준으로 4시간봉 정렬 (09:30~13:30 / 13:30~16:00)
         df_4h = df.resample("4h", origin="2024-01-01 09:30:00", label="left", closed="left").agg({
             "Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"
         }).dropna()
@@ -242,8 +227,8 @@ class USAmericaRSIBot:
         
         print(f" [🇺🇸 미국장 스캐너 실행] KST 시간: {check_time_str} (UTC {utc_hour}시)")
 
-        # 💡 UTC 13~21시 -> KST 22시(밤 10시)~06시(아침 6시) 정규 거래 시간에만 작동!
-        if utc_hour in [13, 14, 15, 16, 17, 18, 19, 20, 21]:
+        # 🟢 1. 미국 정규장 거래 시간 (UTC 13~20시 / KST 밤 10시~새벽 5시): 과대낙폭 30분마다 실시간 감시
+        if utc_hour in [13, 14, 15, 16, 17, 18, 19, 20]:
             us_stocks = self.get_us_top100()
             top30_results = []
             
@@ -263,13 +248,13 @@ class USAmericaRSIBot:
             # if top30_results:
             #     self.send_top30_summary(top30_results, check_time_str)
             
-            # 정규장 마감 후 아침 6시 15분(UTC 21시)에 마감 보고
-            if utc_hour == 21 and not self.state["summary_sent"]:
-                if not self.state["signal_found"]:
-                    self.send_daily_summary(date_str)
-                else:
-                    self.state["summary_sent"] = True
-                    self.save_state()
+        # 📈 2. 장 마감 보고: 서머타임/겨울철 자동 분기 내 미발송 시 무조건 100% 발송
+        current_month = datetime.datetime.utcnow().month
+        is_dst = 3 <= current_month <= 11
+        summary_hours = [20, 21, 22] if is_dst else [21, 22, 23]
+        
+        if utc_hour in summary_hours and not self.state["summary_sent"]:
+            self.send_daily_summary(date_str, self.state.get("signal_count", 0))
 
 if __name__ == "__main__":
     bot = USAmericaRSIBot(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)

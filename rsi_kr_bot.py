@@ -22,7 +22,7 @@ class KoreaRSIBot:
     def load_state(self):
         kst_now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
         today_str = kst_now.strftime('%Y-%m-%d')
-        default_state = {"date": today_str, "signal_found": False, "summary_sent": False}
+        default_state = {"date": today_str, "signal_count": 0, "summary_sent": False}
         
         if os.path.exists(STATE_FILE):
             try:
@@ -43,7 +43,6 @@ class KoreaRSIBot:
             print(f"한국장 상태 저장 실패: {e}")
 
     def is_valid_kr_stock(self, name):
-        """💡 인버스(역추세) ETF 및 불필요한 파생 종목 자동 제외 필터"""
         for kw in ["인버스", "곱버스", "PUT", "put", "선물인버스"]:
             if kw in name:
                 return False
@@ -70,7 +69,8 @@ class KoreaRSIBot:
 
     def send_telegram_alert(self, name, code, rsi_val, close_p, check_time):
         url_link = f"https://m.stock.naver.com/domestic/stock/{code}/total"
-        self.state["signal_found"] = True
+        # 💡 신호 발생 건수 누적 카운트
+        self.state["signal_count"] = self.state.get("signal_count", 0) + 1
         self.save_state()
 
         message = (
@@ -108,14 +108,20 @@ class KoreaRSIBot:
         })
         print("  └─> [한국장 상위 30개 정기 리포트 전송 완료]")
 
-    def send_daily_summary(self, date_str):
+    def send_daily_summary(self, date_str, signal_count):
         self.state["summary_sent"] = True
         self.save_state()
+
+        # 💡 과대낙폭 발생 여부와 무관하게 건수를 명확히 표기하여 100% 장마감 알림 발송
+        if signal_count == 0:
+            result_text = "오늘 장 마감까지 <b>4시간봉 RSI 30 이하</b> 과대낙폭 종목이 <b>발견되지 않았습니다.</b>"
+        else:
+            result_text = f"오늘 장 마감까지 <b>4시간봉 RSI 30 이하</b> 과대낙폭 신호가 <b>총 {signal_count}건</b> 감지되었습니다."
 
         message = (
             f"📈 <b>🇰🇷 [한국장 일일 마감 보고]</b>\n\n"
             f"• <b>기준 날짜:</b> {date_str}\n"
-            f"• <b>스캔 결과:</b> 오늘 장 마감까지 <b>4시간봉 RSI 30 이하</b> 과대낙폭 종목이 <b>발견되지 않았습니다.</b>\n\n"
+            f"• <b>스캔 결과:</b> {result_text}\n\n"
             f"<i>(🟢 한국장 스캐너 정상 작동 중 · 내일 장에서 뵙겠습니다)</i>"
         )
         requests.post(self.api_url, data={
@@ -127,7 +133,6 @@ class KoreaRSIBot:
         print("  └─> [한국장 일일 마감 보고 전송 완료]")
 
     def calc_tradingview_rsi(self, close_series, period=14):
-        """💡 트레이딩뷰 Pine Script(Wilder's RMA) 공식과 100% 동일한 RSI 계산 알고리즘"""
         closes = close_series.tolist()
         if len(closes) < period + 5:
             return None
@@ -167,8 +172,6 @@ class KoreaRSIBot:
             return None, None
             
         df = pd.DataFrame(data, columns=["datetime", "open", "high", "low", "close", "volume"]).set_index("datetime")
-        
-        # 한국장 오전 09:00 기준으로 4시간봉 정렬 (09:00~13:00 / 13:00~15:30)
         df_4h = df.resample("4h", origin="2024-01-01 09:00:00", label="left", closed="left").agg({
             "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"
         }).dropna()
@@ -186,7 +189,7 @@ class KoreaRSIBot:
         
         print(f" [🇰🇷 한국장 스캐너 실행] KST 시간: {check_time_str} (UTC {utc_hour}시)")
 
-        # 💡 UTC 0~7시 -> KST 09:15(오전 9시 15분) ~ 16:15(오후 4시 15분) 한국 정규장+마감 시간에만 작동!
+        # 🟢 1. 정규장 거래 시간 (UTC 0~7시 / KST 09:00~16:00): 과대낙폭 30분마다 실시간 감시
         if utc_hour in [0, 1, 2, 3, 4, 5, 6, 7]:
             kr_stocks = self.get_kr_top100()
             top30_results = []
@@ -207,13 +210,9 @@ class KoreaRSIBot:
             # if top30_results:
             #     self.send_top30_summary(top30_results, check_time_str)
             
-            # 장 마감 직후인 오후 4시 15분(UTC 7시)에 일일 마감 보고
-            if utc_hour == 7 and not self.state["summary_sent"]:
-                if not self.state["signal_found"]:
-                    self.send_daily_summary(date_str)
-                else:
-                    self.state["summary_sent"] = True
-                    self.save_state()
+        # 📈 2. 장 마감 보고: KST 16시~18시(UTC 7, 8, 9시) 구간 내 미발송 시 무조건 100% 발송
+        if utc_hour in [7, 8, 9] and not self.state["summary_sent"]:
+            self.send_daily_summary(date_str, self.state.get("signal_count", 0))
 
 if __name__ == "__main__":
     bot = KoreaRSIBot(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
