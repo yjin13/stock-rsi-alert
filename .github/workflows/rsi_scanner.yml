@@ -2,8 +2,8 @@ name: 🌐 Telegram KR & US Market RSI Scanner
 
 on:
   schedule:
-# 💡 깃허브 서버 정각 병목을 피해 매시간 11분, 41분에 실행 (30분 주기)
-    - cron: '11,41 * * * *'
+# 💡 깃허브 서버 정각 병목을 피해 매시간 12분, 42분에 실행 (30분 주기)
+    - cron: '12,42 * * * *'
   workflow_dispatch: # 체크박스 없이 일반 수동 실행 지원
 
 jobs:
