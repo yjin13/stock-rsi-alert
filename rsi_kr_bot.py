@@ -69,7 +69,6 @@ class KoreaRSIBot:
 
     def send_telegram_alert(self, name, code, rsi_val, close_p, check_time):
         url_link = f"https://m.stock.naver.com/domestic/stock/{code}/total"
-        # 💡 신호 발생 건수 누적 카운트
         self.state["signal_count"] = self.state.get("signal_count", 0) + 1
         self.save_state()
 
@@ -89,7 +88,6 @@ class KoreaRSIBot:
         })
 
     def send_top30_summary(self, results, check_time):
-        """🧪 [테스트/점검용 기능] 필요 시 주석을 풀면 상위 30개 종목 4H RSI 리포트 발송"""
         text_lines = [
             f"{i}. <b>{name}</b> (<code>{code}</code>) | RSI: <b>{rsi:.2f}</b> | {int(price):,}원"
             for i, (name, code, rsi, price) in enumerate(results[:30], 1)
@@ -112,7 +110,6 @@ class KoreaRSIBot:
         self.state["summary_sent"] = True
         self.save_state()
 
-        # 💡 과대낙폭 발생 여부와 무관하게 건수를 명확히 표기하여 100% 장마감 알림 발송
         if signal_count == 0:
             result_text = "오늘 장 마감까지 <b>4시간봉 RSI 30 이하</b> 과대낙폭 종목이 <b>발견되지 않았습니다.</b>"
         else:
@@ -187,9 +184,14 @@ class KoreaRSIBot:
         date_str = self.state["date"]
         check_time_str = kst_now.strftime('%Y-%m-%d %H:%M KST')
         
+        # 🛑 주말(토, 일) 작동 완전 차단 로직 (0:월, 1:화 ... 5:토, 6:일)
+        if kst_now.weekday() >= 5:
+            print(f" [휴장일] 주말이므로 한국장 스캐너를 실행하지 않습니다. ({check_time_str})")
+            return
+
         print(f" [🇰🇷 한국장 스캐너 실행] KST 시간: {check_time_str} (UTC {utc_hour}시)")
 
-        # 🟢 1. 정규장 거래 시간 (UTC 0~7시 / KST 09:00~16:00): 과대낙폭 30분마다 실시간 감시
+        # 🟢 1. 정규장 거래 시간 (UTC 0~7시 / KST 09:00~16:00): 과대낙폭 감시
         if utc_hour in [0, 1, 2, 3, 4, 5, 6, 7]:
             kr_stocks = self.get_kr_top100()
             top30_results = []
@@ -206,11 +208,7 @@ class KoreaRSIBot:
                 except Exception:
                     continue
             
-            # 🧪 정기 리포트 발송 중지 (필요 시 아래 줄 주석(#)을 제거하면 발송됨)
-            # if top30_results:
-            #     self.send_top30_summary(top30_results, check_time_str)
-            
-        # 📈 2. 장 마감 보고: KST 16시~18시(UTC 7, 8, 9시) 구간 내 미발송 시 무조건 100% 발송
+        # 📈 2. 장 마감 보고: KST 16시~18시(UTC 7, 8, 9시) 구간 내 미발송 시 100% 발송
         if utc_hour in [7, 8, 9] and not self.state["summary_sent"]:
             self.send_daily_summary(date_str, self.state.get("signal_count", 0))
 

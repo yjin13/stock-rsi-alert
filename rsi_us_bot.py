@@ -46,7 +46,6 @@ class USAmericaRSIBot:
 
     def send_telegram_alert(self, name, ticker, rsi_val, close_p, check_time):
         url_link = f"https://finance.yahoo.com/quote/{ticker}"
-        # 💡 신호 발생 건수 누적 카운트
         self.state["signal_count"] = self.state.get("signal_count", 0) + 1
         self.save_state()
 
@@ -66,7 +65,6 @@ class USAmericaRSIBot:
         })
 
     def send_top30_summary(self, results, check_time):
-        """🧪 [테스트/점검용 기능] 필요 시 주석을 풀면 상위 30개 종목 4H RSI 리포트 발송"""
         text_lines = [
             f"{i}. <b>{name}</b> (<code>{ticker}</code>) | RSI: <b>{rsi:.2f}</b> | ${price:,.2f}"
             for i, (name, ticker, rsi, price) in enumerate(results[:30], 1)
@@ -89,7 +87,6 @@ class USAmericaRSIBot:
         self.state["summary_sent"] = True
         self.save_state()
 
-        # 💡 과대낙폭 발생 여부와 무관하게 건수를 명확히 표기하여 100% 장마감 알림 발송
         if signal_count == 0:
             result_text = "밤사이 미국장 마감까지 <b>4시간봉 RSI 30 이하</b> 과대낙폭 종목이 <b>발견되지 않았습니다.</b>"
         else:
@@ -111,70 +108,28 @@ class USAmericaRSIBot:
 
     def get_us_top100(self):
         return {
-            "SPY": "S&P 500 ETF",
-            "QQQ": "나스닥 100 ETF",
-            "DIA": "다우존스 ETF",
-            "QLD": "나스닥 100 2배 (QLD)",
-            "SSO": "S&P 500 2배 (SSO)",
-            "TQQQ": "나스닥 100 3배 (TQQQ)",
-            "UPRO": "S&P 500 3배 (UPRO)",
-            "SOXX": "필라델피아 반도체 ETF",
-            "SOXL": "반도체 3배 (SOXL)",
-            "SMH": "반도체 섹터 (SMH)",
-            "USD": "반도체 2배 (USD)",
-            "XLK": "기술주 섹터 (XLK)",
-            "TLT": "미국 20년물 국채 ETF",
+            "SPY": "S&P 500 ETF", "QQQ": "나스닥 100 ETF", "DIA": "다우존스 ETF",
+            "QLD": "나스닥 100 2배 (QLD)", "SSO": "S&P 500 2배 (SSO)",
+            "TQQQ": "나스닥 100 3배 (TQQQ)", "UPRO": "S&P 500 3배 (UPRO)",
+            "SOXX": "필라델피아 반도체 ETF", "SOXL": "반도체 3배 (SOXL)",
+            "SMH": "반도체 섹터 (SMH)", "USD": "반도체 2배 (USD)",
+            "XLK": "기술주 섹터 (XLK)", "TLT": "미국 20년물 국채 ETF",
             "TMF": "미국 20년물 국채 3배 (TMF)",
-            "AAPL": "애플",
-            "NVDA": "엔비디아",
-            "MSFT": "마이크로소프트",
-            "GOOGL": "알파벳(구글)",
-            "AMZN": "아마존",
-            "META": "메타",
-            "TSLA": "테슬라",
-            "AVGO": "브로드컴",
-            "TSM": "TSMC",
-            "AMD": "AMD",
-            "ASML": "ASML",
-            "QCOM": "퀄컴",
-            "TXN": "텍사스 인스트루먼트",
-            "MU": "마이크론",
-            "INTC": "인텔",
-            "ARM": "ARM 홀딩스",
-            "SMCI": "슈퍼마이크로",
-            "PLTR": "팔란티어",
-            "CRWD": "크라우드스트라이크",
-            "SNOW": "스노우플레이크",
-            "PANW": "팔로알토",
-            "NKE": "나이키",
-            "WMT": "월마트",
-            "COST": "코스트코",
-            "HD": "홈디포",
-            "MCD": "맥도날드",
-            "SBUX": "스타벅스",
-            "DIS": "디즈니",
-            "NFLX": "넷플릭스",
-            "UBER": "우버",
-            "PG": "프록터앤드갬블(P&G)",
-            "KO": "코카콜라",
-            "PEP": "펩시코",
-            "BRK-B": "버크셔 해서웨이",
-            "JPM": "JP모건 체이스",
-            "BAC": "뱅크오브아메리카",
-            "V": "비자",
-            "MA": "마스터카드",
-            "SOFI": "소파이",
-            "COIN": "코인베이스",
-            "MSTR": "마이크로스트래티지",
-            "LLY": "일라이릴리",
-            "UNH": "유나이티드헬스",
-            "JNJ": "존슨앤드존슨",
-            "MRK": "머크",
-            "ABBV": "애브비",
-            "XOM": "엑슨모빌",
-            "CVX": "쉐브론",
-            "GE": "제너럴 일렉트릭",
-            "CAT": "캐터필러"
+            "AAPL": "애플", "NVDA": "엔비디아", "MSFT": "마이크로소프트",
+            "GOOGL": "알파벳(구글)", "AMZN": "아마존", "META": "메타", "TSLA": "테슬라",
+            "AVGO": "브로드컴", "TSM": "TSMC", "AMD": "AMD", "ASML": "ASML",
+            "QCOM": "퀄컴", "TXN": "텍사스 인스트루먼트", "MU": "마이크론",
+            "INTC": "인텔", "ARM": "ARM 홀딩스", "SMCI": "슈퍼마이크로",
+            "PLTR": "팔란티어", "CRWD": "크라우드스트라이크", "SNOW": "스노우플레이크",
+            "PANW": "팔로알토", "NKE": "나이키", "WMT": "월마트", "COST": "코스트코",
+            "HD": "홈디포", "MCD": "맥도날드", "SBUX": "스타벅스", "DIS": "디즈니",
+            "NFLX": "넷플릭스", "UBER": "우버", "PG": "프록터앤드갬블(P&G)",
+            "KO": "코카콜라", "PEP": "펩시코", "BRK-B": "버크셔 해서웨이",
+            "JPM": "JP모건 체이스", "BAC": "뱅크오브아메리카", "V": "비자",
+            "MA": "마스터카드", "SOFI": "소파이", "COIN": "코인베이스",
+            "MSTR": "마이크로스트래티지", "LLY": "일라이릴리", "UNH": "유나이티드헬스",
+            "JNJ": "존슨앤드존슨", "MRK": "머크", "ABBV": "애브비",
+            "XOM": "엑슨모빌", "CVX": "쉐브론", "GE": "제너럴 일렉트릭", "CAT": "캐터필러"
         }
 
     def calc_tradingview_rsi(self, close_series, period=14):
@@ -225,9 +180,17 @@ class USAmericaRSIBot:
         date_str = self.state["date"]
         check_time_str = kst_now.strftime('%Y-%m-%d %H:%M KST')
         
+        # 🛑 미국장 주말(휴장일) 완벽 차단 로직
+        # 한국 시간 기준 12시간을 빼서 '미국 현지 세션 날짜'를 구함. 
+        # (토요일 아침까지는 금요일 세션으로 인식하므로 실행됨!)
+        session_time = kst_now - datetime.timedelta(hours=12)
+        if session_time.weekday() >= 5: # 5: 토요일, 6: 일요일
+            print(f" [휴장일] 미국 현지 주말이므로 미국장 스캐너를 실행하지 않습니다. ({check_time_str})")
+            return
+
         print(f" [🇺🇸 미국장 스캐너 실행] KST 시간: {check_time_str} (UTC {utc_hour}시)")
 
-        # 🟢 1. 미국 정규장 거래 시간 (UTC 13~20시 / KST 밤 10시~새벽 5시): 과대낙폭 30분마다 실시간 감시
+        # 🟢 1. 미국 정규장 거래 시간 (UTC 13~20시 / KST 밤 10시~새벽 5시) 감시
         if utc_hour in [13, 14, 15, 16, 17, 18, 19, 20]:
             us_stocks = self.get_us_top100()
             top30_results = []
@@ -244,11 +207,7 @@ class USAmericaRSIBot:
                 except Exception:
                     continue
             
-            # 🧪 정기 리포트 발송 중지 (필요 시 아래 줄 주석(#)을 제거하면 발송됨)
-            # if top30_results:
-            #     self.send_top30_summary(top30_results, check_time_str)
-            
-        # 📈 2. 장 마감 보고: 서머타임/겨울철 자동 분기 내 미발송 시 무조건 100% 발송
+        # 📈 2. 장 마감 보고: 서머타임/겨울철 분기 및 미발송 시 100% 발송
         current_month = datetime.datetime.utcnow().month
         is_dst = 3 <= current_month <= 11
         summary_hours = [20, 21, 22] if is_dst else [21, 22, 23]
