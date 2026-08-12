@@ -3,14 +3,12 @@ import time
 import json
 import datetime
 import requests
-import pandas as pd
-import yfinance as yf
 
-# 💡 텔레그램 설정 및 RSI 알림 기준 변수 (여기 숫자만 바꾸면 전체 자동 적용!)
+# 💡 텔레그램 설정 및 RSI 알림 기준 변수
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "본인의_CHAT_ID_입력")
 STATE_FILE = "us_state.json"
-RSI_THRESHOLD = 40.0  # <--- 🎯 원하는 RSI 수치로 언제든 편하게 변경하세요!
+RSI_THRESHOLD = 40.0  # <--- 🎯 원하는 RSI 수치
 
 class USAmericaRSIBot:
     def __init__(self, token, chat_id):
@@ -47,7 +45,10 @@ class USAmericaRSIBot:
             print(f"미국장 상태 저장 실패: {e}")
 
     def send_telegram_alert(self, name, ticker, rsi_val, close_p, check_time):
-        url_link = f"https://finance.yahoo.com/quote/{ticker}"
+        # 트레이딩뷰 티커 기호(BRK.B)를 야후 링크용으로 변환 처리
+        url_ticker = ticker.replace(".", "-")
+        url_link = f"https://finance.yahoo.com/quote/{url_ticker}"
+        
         self.state["signal_count"] = self.state.get("signal_count", 0) + 1
         self.save_state()
 
@@ -65,25 +66,6 @@ class USAmericaRSIBot:
             "parse_mode": "HTML",
             "disable_web_page_preview": True
         })
-
-    def send_top30_summary(self, results, check_time):
-        text_lines = [
-            f"{i}. <b>{name}</b> (<code>{ticker}</code>) | RSI: <b>{rsi:.2f}</b> | ${price:,.2f}"
-            for i, (name, ticker, rsi, price) in enumerate(results[:30], 1)
-        ]
-        message = (
-            f"📊 <b>🇺🇸 [미국장 상위 30개 종목 4H RSI 정기 리포트]</b>\n"
-            f"• <b>기준 시간:</b> {check_time}\n\n"
-            + "\n".join(text_lines)
-            + "\n\n<i>(🟢 트레이딩뷰 RSI 공식 적용 완료)</i>"
-        )
-        requests.post(self.api_url, data={
-            "chat_id": self.chat_id,
-            "text": message,
-            "parse_mode": "HTML",
-            "disable_web_page_preview": True
-        })
-        print("  └─> [미국장 상위 30개 정기 리포트 전송 완료]")
 
     def send_daily_summary(self, date_str, signal_count):
         self.state["summary_sent"] = True
@@ -106,7 +88,6 @@ class USAmericaRSIBot:
             "parse_mode": "HTML",
             "disable_web_page_preview": True
         })
-        print("  └─> [미국장 일일 마감 보고 전송 완료]")
 
     def get_us_top100(self):
         return {
@@ -126,7 +107,7 @@ class USAmericaRSIBot:
             "PANW": "팔로알토", "NKE": "나이키", "WMT": "월마트", "COST": "코스트코",
             "HD": "홈디포", "MCD": "맥도날드", "SBUX": "스타벅스", "DIS": "디즈니",
             "NFLX": "넷플릭스", "UBER": "우버", "PG": "프록터앤드갬블(P&G)",
-            "KO": "코카콜라", "PEP": "펩시코", "BRK-B": "버크셔 해서웨이",
+            "KO": "코카콜라", "PEP": "펩시코", "BRK.B": "버크셔 해서웨이", # TV 맞춤
             "JPM": "JP모건 체이스", "BAC": "뱅크오브아메리카", "V": "비자",
             "MA": "마스터카드", "SOFI": "소파이", "COIN": "코인베이스",
             "MSTR": "마이크로스트래티지", "LLY": "일라이릴리", "UNH": "유나이티드헬스",
@@ -134,47 +115,27 @@ class USAmericaRSIBot:
             "XOM": "엑슨모빌", "CVX": "쉐브론", "GE": "제너럴 일렉트릭", "CAT": "캐터필러"
         }
 
-    def calc_tradingview_rsi(self, close_series, period=14):
-        closes = close_series.tolist()
-        if len(closes) < period + 5:
-            return None
-            
-        gains, losses = [], []
-        for i in range(1, len(closes)):
-            delta = closes[i] - closes[i - 1]
-            gains.append(max(0.0, delta))
-            losses.append(max(0.0, -delta))
-            
-        avg_gain = sum(gains[:period]) / period
-        avg_loss = sum(losses[:period]) / period
-        
-        for i in range(period, len(gains)):
-            avg_gain = (avg_gain * (period - 1) + gains[i]) / period
-            avg_loss = (avg_loss * (period - 1) + losses[i]) / period
-            
-        if avg_loss == 0:
-            return 100.0
-        rs = avg_gain / avg_loss
-        return float(100.0 - (100.0 / (1.0 + rs)))
-
-    def fetch_us_4h_rsi(self, ticker, period=14):
-        df = yf.download(ticker, period="60d", interval="1h", prepost=False, progress=False)
-        if df.empty or len(df) < 50:
-            return None, None
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
-            
-        if df.index.tz is not None:
-            df.index = df.index.tz_localize(None)
-            
-        df_4h = df.resample("4h", origin="2024-01-01 09:30:00", label="left", closed="left").agg({
-            "Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"
-        }).dropna()
-        
-        rsi_val = self.calc_tradingview_rsi(df_4h["Close"], period)
-        if rsi_val is None:
-            return None, None
-        return rsi_val, float(df_4h["Close"].iloc[-1])
+    def fetch_tv_bulk_rsi(self, tickers):
+        """💡 트레이딩뷰 본사 API 다이렉트 호출: 100개 종목 4H RSI를 1초 만에 그대로 가져옴"""
+        url = "https://scanner.tradingview.com/america/scan"
+        payload = {
+            "filter": [{"left": "name", "operation": "in_range", "right": tickers}],
+            "columns": ["name", "close", "RSI|240"]  # RSI|240 = 4시간봉 RSI
+        }
+        try:
+            res = requests.post(url, json=payload, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+            data = res.json()
+            results = {}
+            for item in data.get("data", []):
+                ticker = item["d"][0]
+                close_p = item["d"][1]
+                rsi_val = item["d"][2]
+                if rsi_val is not None:
+                    results[ticker] = (rsi_val, close_p)
+            return results
+        except Exception as e:
+            print(f"TV API 에러: {e}")
+            return {}
 
     def run(self):
         kst_now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
@@ -182,31 +143,26 @@ class USAmericaRSIBot:
         date_str = self.state["date"]
         check_time_str = kst_now.strftime('%Y-%m-%d %H:%M KST')
         
-        # 🛑 미국장 주말 휴장 차단 (한국 시간 토요일 아침까지는 작동)
         session_time = kst_now - datetime.timedelta(hours=12)
         if session_time.weekday() >= 5:
-            print(f" [휴장일] 미국 현지 주말이므로 미국장 스캐너를 실행하지 않습니다. ({check_time_str})")
+            print(f" [휴장일] 미국 현지 주말이므로 실행하지 않습니다. ({check_time_str})")
             return
 
-        print(f" [🇺🇸 미국장 스캐너 실행] KST 시간: {check_time_str} (UTC {utc_hour}시)")
+        print(f" [🇺🇸 미국장 트레이딩뷰 연동 스캐너 실행] KST 시간: {check_time_str} (UTC {utc_hour}시)")
 
         if utc_hour in [13, 14, 15, 16, 17, 18, 19, 20]:
             us_stocks = self.get_us_top100()
-            top30_results = []
+            tickers = list(us_stocks.keys())
+            
+            # 🔥 야후 안 쓰고 트레이딩뷰에서 70개 종목 한 번에 싹 긁어옴!
+            tv_data = self.fetch_tv_bulk_rsi(tickers)
             
             for ticker, name in us_stocks.items():
-                try:
-                    rsi, close_p = self.fetch_us_4h_rsi(ticker)
-                    if rsi:
-                        if len(top30_results) < 30:
-                            top30_results.append((name, ticker, rsi, close_p))
-                        
-                        # 💡 설정한 변수값(RSI_THRESHOLD)을 기준으로 알림 작동!
-                        if rsi <= RSI_THRESHOLD:
-                            self.send_telegram_alert(name, ticker, rsi, close_p, check_time_str)
-                    time.sleep(0.1)
-                except Exception:
-                    continue
+                if ticker in tv_data:
+                    rsi, close_p = tv_data[ticker]
+                    
+                    if rsi <= RSI_THRESHOLD:
+                        self.send_telegram_alert(name, ticker, rsi, close_p, check_time_str)
             
         current_month = datetime.datetime.utcnow().month
         is_dst = 3 <= current_month <= 11
