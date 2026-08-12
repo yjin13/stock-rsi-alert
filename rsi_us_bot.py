@@ -6,9 +6,11 @@ import requests
 import pandas as pd
 import yfinance as yf
 
+# 💡 텔레그램 설정 및 RSI 알림 기준 변수 (여기 숫자만 바꾸면 전체 자동 적용!)
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "본인의_CHAT_ID_입력")
 STATE_FILE = "us_state.json"
+RSI_THRESHOLD = 40.0  # <--- 🎯 원하는 RSI 수치로 언제든 편하게 변경하세요!
 
 class USAmericaRSIBot:
     def __init__(self, token, chat_id):
@@ -50,7 +52,7 @@ class USAmericaRSIBot:
         self.save_state()
 
         message = (
-            f"🚨 <b>🇺🇸 [미국장 4H RSI 과대낙폭 감지]</b>\n\n"
+            f"🚨 <b>🇺🇸 [미국장 4H RSI {int(RSI_THRESHOLD)} 이하 감지]</b>\n\n"
             f"• <b>기준 시간:</b> {check_time}\n"
             f"• <b>종목명:</b> <a href='{url_link}'>{name}</a> (<code>{ticker}</code>)\n"
             f"• <b>4시간봉 RSI:</b> <code>{rsi_val:.2f}</code>\n"
@@ -88,9 +90,9 @@ class USAmericaRSIBot:
         self.save_state()
 
         if signal_count == 0:
-            result_text = "밤사이 미국장 마감까지 <b>4시간봉 RSI 30 이하</b> 과대낙폭 종목이 <b>발견되지 않았습니다.</b>"
+            result_text = f"밤사이 미국장 마감까지 <b>4시간봉 RSI {int(RSI_THRESHOLD)} 이하</b> 종목이 <b>발견되지 않았습니다.</b>"
         else:
-            result_text = f"밤사이 미국장 마감까지 <b>4시간봉 RSI 30 이하</b> 과대낙폭 신호가 <b>총 {signal_count}건</b> 감지되었습니다."
+            result_text = f"밤사이 미국장 마감까지 <b>4시간봉 RSI {int(RSI_THRESHOLD)} 이하</b> 신호가 <b>총 {signal_count}건</b> 감지되었습니다."
 
         message = (
             f"📈 <b>🇺🇸 [미국장 일일 마감 보고]</b>\n\n"
@@ -180,17 +182,14 @@ class USAmericaRSIBot:
         date_str = self.state["date"]
         check_time_str = kst_now.strftime('%Y-%m-%d %H:%M KST')
         
-        # 🛑 미국장 주말(휴장일) 완벽 차단 로직
-        # 한국 시간 기준 12시간을 빼서 '미국 현지 세션 날짜'를 구함. 
-        # (토요일 아침까지는 금요일 세션으로 인식하므로 실행됨!)
+        # 🛑 미국장 주말 휴장 차단 (한국 시간 토요일 아침까지는 작동)
         session_time = kst_now - datetime.timedelta(hours=12)
-        if session_time.weekday() >= 5: # 5: 토요일, 6: 일요일
+        if session_time.weekday() >= 5:
             print(f" [휴장일] 미국 현지 주말이므로 미국장 스캐너를 실행하지 않습니다. ({check_time_str})")
             return
 
         print(f" [🇺🇸 미국장 스캐너 실행] KST 시간: {check_time_str} (UTC {utc_hour}시)")
 
-        # 🟢 1. 미국 정규장 거래 시간 (UTC 13~20시 / KST 밤 10시~새벽 5시) 감시
         if utc_hour in [13, 14, 15, 16, 17, 18, 19, 20]:
             us_stocks = self.get_us_top100()
             top30_results = []
@@ -201,13 +200,14 @@ class USAmericaRSIBot:
                     if rsi:
                         if len(top30_results) < 30:
                             top30_results.append((name, ticker, rsi, close_p))
-                        if rsi <= 30.0:
+                        
+                        # 💡 설정한 변수값(RSI_THRESHOLD)을 기준으로 알림 작동!
+                        if rsi <= RSI_THRESHOLD:
                             self.send_telegram_alert(name, ticker, rsi, close_p, check_time_str)
                     time.sleep(0.1)
                 except Exception:
                     continue
             
-        # 📈 2. 장 마감 보고: 서머타임/겨울철 분기 및 미발송 시 100% 발송
         current_month = datetime.datetime.utcnow().month
         is_dst = 3 <= current_month <= 11
         summary_hours = [20, 21, 22] if is_dst else [21, 22, 23]
