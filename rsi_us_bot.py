@@ -10,7 +10,7 @@ import holidays
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "본인의_CHAT_ID_입력")
 STATE_FILE = "us_state.json"
-RSI_THRESHOLD = 40.0  # <--- 🎯 원하는 RSI 수치
+RSI_THRESHOLD = 35.0  # <--- 🎯 원하는 RSI 수치
 
 class USAmericaRSIBot:
     def __init__(self, token, chat_id):
@@ -109,10 +109,6 @@ class USAmericaRSIBot:
 
         # 🌟 내 관심 종목 (여기에 밈주식이나 관심 종목 자유 추가)
         my_favorites = {
-            "GME": "게임스탑",
-            "AMC": "AMC 엔터테인먼트",
-            "RDDT": "레딧",
-            "DJT": "트럼프 미디어"
         }
         
         base_stocks.update(my_favorites)
