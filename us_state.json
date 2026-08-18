@@ -1,6 +1,6 @@
 {
     "date": "2026-08-18",
-    "signal_count": 14,
+    "signal_count": 15,
     "summary_sent": false,
     "alerted": [
         "SQQQ",
@@ -16,6 +16,7 @@
         "MCD",
         "PG",
         "GME",
-        "DJT"
+        "DJT",
+        "AVGO"
     ]
 }
