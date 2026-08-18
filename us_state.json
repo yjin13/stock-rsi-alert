@@ -1,5 +1,21 @@
 {
-    "date": "2026-08-17",
-    "signal_count": 16,
-    "summary_sent": true
+    "date": "2026-08-18",
+    "signal_count": 14,
+    "summary_sent": false,
+    "alerted": [
+        "SQQQ",
+        "SOXS",
+        "TLT",
+        "TMF",
+        "TZA",
+        "BOIL",
+        "META",
+        "BRK-B",
+        "UNH",
+        "NVO",
+        "MCD",
+        "PG",
+        "GME",
+        "DJT"
+    ]
 }
