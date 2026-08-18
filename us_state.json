@@ -1,7 +1,7 @@
 {
     "date": "2026-08-18",
     "signal_count": 15,
-    "summary_sent": false,
+    "summary_sent": true,
     "alerted": [
         "SQQQ",
         "SOXS",
