@@ -26,13 +26,17 @@ class USAmericaRSIBot:
 
     def load_state(self):
         session_date = self.get_session_date()
-        default_state = {"date": session_date, "signal_count": 0, "summary_sent": False}
+        # 💡 'alerted' 리스트 추가!
+        default_state = {"date": session_date, "signal_count": 0, "summary_sent": False, "alerted": []}
+
         if os.path.exists(STATE_FILE):
             try:
                 with open(STATE_FILE, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     if data.get("date") != session_date:
                         return default_state
+                    if "alerted" not in data:
+                        data["alerted"] = []
                     return data
             except Exception:
                 pass
@@ -172,13 +176,17 @@ class USAmericaRSIBot:
 
         print(f" [🇺🇸 미국장 스캐너 실행] KST 시간: {check_time_str}")
 
-        if utc_hour in [13, 14, 15, 16, 17, 18, 19, 20]:
+        # 💡 겨울철(표준시) 장 마감 시간인 UTC 21시까지 커버하도록 '21' 추가!
+        if utc_hour in [13, 14, 15, 16, 17, 18, 19, 20, 21]:
             us_stocks = self.get_us_target_stocks()
             for ticker, name in us_stocks.items():
                 try:
                     rsi, close_p = self.fetch_us_4h_rsi(ticker)
-                    if rsi and rsi <= RSI_THRESHOLD:
+                    # 💡 RSI 40 이하 + 중복 알람 차단!
+                    if rsi and rsi <= RSI_THRESHOLD and ticker not in self.state.get("alerted", []):
                         self.send_telegram_alert(name, ticker, rsi, close_p, check_time_str)
+                        self.state["alerted"].append(ticker) # 명단에 추가
+                        self.save_state()
                     time.sleep(0.1)
                 except Exception:
                     continue

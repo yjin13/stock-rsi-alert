@@ -24,13 +24,18 @@ class KoreaRSIBot:
     def load_state(self):
         kst_now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
         today_str = kst_now.strftime('%Y-%m-%d')
-        default_state = {"date": today_str, "signal_count": 0, "summary_sent": False}
+        # 💡 'alerted' (오늘 알람 보낸 종목 기억하기) 리스트 추가!
+        default_state = {"date": today_str, "signal_count": 0, "summary_sent": False, "alerted": []}
+
         if os.path.exists(STATE_FILE):
             try:
                 with open(STATE_FILE, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     if data.get("date") != today_str:
                         return default_state
+                    # 기존 파일에 alerted가 없으면 빈 리스트를 넣어줌
+                    if "alerted" not in data:
+                        data["alerted"] = []
                     return data
             except Exception:
                 pass
@@ -167,8 +172,11 @@ class KoreaRSIBot:
             for code, name in kr_stocks.items():
                 try:
                     rsi, close_p = self.fetch_kr_4h_rsi(code)
-                    if rsi and rsi <= RSI_THRESHOLD:
+                    # 💡 RSI가 40 이하이면서, 오늘 아직 알람을 안 보낸 종목일 때만 전송!
+                    if rsi and rsi <= RSI_THRESHOLD and code not in self.state.get("alerted", []):
                         self.send_telegram_alert(name, code, rsi, close_p, check_time_str)
+                        self.state["alerted"].append(code) # 명단에 추가
+                        self.save_state()
                     time.sleep(0.05)
                 except Exception:
                     continue
