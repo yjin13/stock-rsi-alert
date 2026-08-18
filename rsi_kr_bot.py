@@ -9,11 +9,10 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import holidays
 
-# 💡 텔레그램 설정 및 RSI 알림 기준 변수
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "본인의_CHAT_ID_입력")
 STATE_FILE = "kr_state.json"
-RSI_THRESHOLD = 40.0  # <--- 🎯 원하는 RSI 수치로 언제든 변경하세요!
+RSI_THRESHOLD = 40.0  # <--- 🎯 원하는 RSI 수치
 
 class KoreaRSIBot:
     def __init__(self, token, chat_id):
@@ -52,10 +51,10 @@ class KoreaRSIBot:
 
     def get_kr_top100(self):
         urls = [
-            "https://finance.naver.com/sise/sise_quant.naver",             # 코스피 거래량 상위
-            "https://finance.naver.com/sise/sise_quant.naver?sosok=1",     # 코스닥 거래량 상위
-            "https://finance.naver.com/sise/sise_quant_high.naver",        # 코스피 거래량 급증
-            "https://finance.naver.com/sise/sise_quant_high.naver?sosok=1" # 코스닥 거래량 급증
+            "https://finance.naver.com/sise/sise_quant.naver",             
+            "https://finance.naver.com/sise/sise_quant.naver?sosok=1",     
+            "https://finance.naver.com/sise/sise_quant_high.naver",        
+            "https://finance.naver.com/sise/sise_quant_high.naver?sosok=1" 
         ]
         headers = {"User-Agent": "Mozilla/5.0"}
         stocks = {}
@@ -64,7 +63,6 @@ class KoreaRSIBot:
             soup = BeautifulSoup(res.text, "html.parser")
             for a in soup.find_all("a", href=True):
                 if "/item/main.naver?code=" in a["href"]:
-                    # 영어(대소문자)+숫자 6자리 신규 상장 종목 완벽 인식
                     m = re.search(r"code=([0-9A-Za-z]{6})", a["href"])
                     if m and a.text.strip():
                         stock_name = a.text.strip()
@@ -125,7 +123,6 @@ class KoreaRSIBot:
         return float(100.0 - (100.0 / (1.0 + rs)))
 
     def fetch_kr_4h_rsi(self, code, period=14):
-        # 네이버 2000봉(최대치) 데이터로 정밀도 극대화
         url = f"https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=60&count=2000&requestType=1"
         res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
         if res.status_code != 200:
@@ -142,8 +139,6 @@ class KoreaRSIBot:
             return None, None
             
         df = pd.DataFrame(data, columns=["datetime", "open", "high", "low", "close", "volume"]).set_index("datetime")
-        
-        # 트레이딩뷰 정규장 4시간봉(09:00 / 13:00) 기준선 강제 정렬
         df_4h = df.resample("4h", origin="2024-01-01 09:00:00", label="left", closed="left").agg({
             "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"
         }).dropna()
@@ -161,7 +156,6 @@ class KoreaRSIBot:
         
         kr_holidays = holidays.KR()
         
-        # 🛑 주말이거나 한국 공휴일이면 완벽 차단
         if kst_now.weekday() >= 5 or kst_now.date() in kr_holidays:
             print(f" [휴장일] 주말 또는 공휴일이므로 한국장 스캐너를 실행하지 않습니다. ({check_time_str})")
             return

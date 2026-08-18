@@ -7,7 +7,6 @@ import pandas as pd
 import yfinance as yf
 import holidays
 
-# 💡 텔레그램 설정 및 RSI 알림 기준 변수
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "본인의_CHAT_ID_입력")
 STATE_FILE = "us_state.json"
@@ -78,14 +77,14 @@ class USAmericaRSIBot:
         requests.post(self.api_url, data={"chat_id": self.chat_id, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True})
 
     def get_us_target_stocks(self):
-        # 1. 미국장 메인 핵심 종목 및 주요 ETF
         base_stocks = {
             "SPY": "S&P 500 ETF", "QQQ": "나스닥 100 ETF", "DIA": "다우존스 ETF",
             "TQQQ": "나스닥 3배", "SQQQ": "나스닥 인버스 3배", "QLD": "나스닥 2배",
             "UPRO": "S&P500 3배", "SOXX": "반도체 ETF", "SOXL": "반도체 3배", 
             "SOXS": "반도체 인버스 3배", "USD": "반도체 2배", "TLT": "20년물 국채", 
             "TMF": "국채 3배", "TSLL": "테슬라 1.5배", "CONL": "코인베이스 2배",
-            "NVDL": "엔비디아 2배",
+            "NVDL": "엔비디아 2배", "FNGU": "빅테크 3배", "TZA": "중소형주 인버스 3배",
+            "BOIL": "천연가스 2배", "SCHD": "미국 배당성장 ETF",
             "AAPL": "애플", "NVDA": "엔비디아", "MSFT": "마이크로소프트",
             "GOOGL": "알파벳(구글)", "AMZN": "아마존", "META": "메타", "TSLA": "테슬라",
             "AVGO": "브로드컴", "TSM": "TSMC", "AMD": "AMD", "ASML": "ASML",
@@ -94,16 +93,17 @@ class USAmericaRSIBot:
             "PLTR": "팔란티어", "CRWD": "크라우드스트라이크", "SNOW": "스노우플레이크",
             "PANW": "팔로알토", "NOW": "서비스나우", "ADBE": "어도비",
             "COIN": "코인베이스", "MSTR": "마이크로스트래티지", "HOOD": "로빈후드",
+            "UBER": "우버", "NFLX": "넷플릭스", "CRM": "세일즈포스", 
+            "DDOG": "데이터독", "NET": "클라우드플레어",
             "JPM": "JP모건", "V": "비자", "BRK-B": "버크셔 해서웨이", 
             "LLY": "일라이릴리", "UNH": "유나이티드헬스", "NVO": "노보 노디스크",
+            "JNJ": "존슨앤드존슨", "PEP": "펩시코", "MCD": "맥도날드", "ABBV": "애브비",
             "WMT": "월마트", "COST": "코스트코", "PG": "프록터앤드갬블", "KO": "코카콜라",
-            "FNGU": "빅테크 3배", "SOXS": "반도체 인버스 3배", "TZA": "중소형주 인버스 3배", "BOIL": "천연가스 2배", "UPRO": "S&P500 3배",
-            "SCHD": "미국 배당성장 ETF", "JNJ": "존슨앤드존슨", "PEP": "펩시코", "MCD": "맥도날드", "ABBV": "애브비",
-            "UBER": "우버", "NFLX": "넷플릭스", "CRM": "세일즈포스", "DDOG": "데이터독", "NET": "클라우드플레어",
-            "CAT": "캐터필러", "GE": "제너럴일렉트릭", "XOM": "엑슨모빌", "CVX": "쉐브론", "BA": "보잉"
+            "CAT": "캐터필러", "GE": "제너럴일렉트릭", "XOM": "엑슨모빌", 
+            "CVX": "쉐브론", "BA": "보잉"
         }
 
-        # 🌟 2. [내 관심 종목 강제 추가란]
+        # 🌟 내 관심 종목 (여기에 밈주식이나 관심 종목 자유 추가)
         my_favorites = {
             "GME": "게임스탑",
             "AMC": "AMC 엔터테인먼트",
@@ -137,10 +137,7 @@ class USAmericaRSIBot:
         return float(100.0 - (100.0 / (1.0 + rs)))
 
     def fetch_us_4h_rsi(self, ticker, period=14):
-        # 야후 API 버그를 막기 위한 특수 티커 자동 변환 (BRK.B -> BRK-B)
         yf_ticker = ticker.replace(".", "-") 
-        
-        # 최대치 730일 데이터로 RSI 초기 계산 오차 100% 멸균
         df = yf.download(yf_ticker, period="730d", interval="1h", prepost=False, progress=False)
         if df.empty or len(df) < 50:
             return None, None
@@ -151,7 +148,6 @@ class USAmericaRSIBot:
         if df.index.tz is not None:
             df.index = df.index.tz_localize(None)
             
-        # 트레이딩뷰 차트와 정확히 일치하는 09:30 기준 4시간봉 정렬
         df_4h = df.resample("4h", origin="2024-01-01 09:30:00", label="left", closed="left").agg({
             "Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"
         }).dropna()
@@ -168,10 +164,8 @@ class USAmericaRSIBot:
         check_time_str = kst_now.strftime('%Y-%m-%d %H:%M KST')
         
         session_time = kst_now - datetime.timedelta(hours=12)
-        
         nyse_holidays = holidays.NYSE()
         
-        # 🛑 미국 현지 주말이거나 뉴욕증권거래소 휴장일이면 완벽 차단
         if session_time.weekday() >= 5 or session_time.date() in nyse_holidays:
             print(f" [휴장일] 미국 현지 주말 또는 공휴일이므로 스캐너를 실행하지 않습니다. ({check_time_str})")
             return
