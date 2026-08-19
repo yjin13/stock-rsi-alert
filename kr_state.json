@@ -1,5 +1,6 @@
 {
-    "date": "2026-08-18",
+    "date": "2026-08-19",
     "signal_count": 0,
-    "summary_sent": true
+    "summary_sent": true,
+    "alerted": []
 }
