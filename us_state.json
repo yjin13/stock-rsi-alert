@@ -1,12 +1,13 @@
 {
     "date": "2026-08-20",
-    "signal_count": 5,
+    "signal_count": 6,
     "summary_sent": false,
     "alerted": [
         "META",
         "AVGO",
         "UNH",
         "ARM",
-        "WMT"
+        "WMT",
+        "BA"
     ]
 }
