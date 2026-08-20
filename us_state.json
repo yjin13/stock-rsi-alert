@@ -1,7 +1,7 @@
 {
     "date": "2026-08-20",
     "signal_count": 8,
-    "summary_sent": false,
+    "summary_sent": true,
     "alerted": [
         "META",
         "AVGO",
