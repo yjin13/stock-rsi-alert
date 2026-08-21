@@ -1,7 +1,7 @@
 {
     "date": "2026-08-21",
     "signal_count": 10,
-    "summary_sent": false,
+    "summary_sent": true,
     "alerted": [
         "AVGO",
         "CRWD",
