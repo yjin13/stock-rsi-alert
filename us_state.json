@@ -1,6 +1,6 @@
 {
     "date": "2026-08-21",
-    "signal_count": 9,
+    "signal_count": 10,
     "summary_sent": false,
     "alerted": [
         "AVGO",
@@ -11,6 +11,7 @@
         "BA",
         "TXN",
         "INTC",
-        "ARM"
+        "ARM",
+        "BRK-B"
     ]
 }
