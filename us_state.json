@@ -1,17 +1,14 @@
 {
-    "date": "2026-08-21",
-    "signal_count": 10,
-    "summary_sent": true,
+    "date": "2026-08-24",
+    "signal_count": 7,
+    "summary_sent": false,
     "alerted": [
         "AVGO",
-        "CRWD",
-        "UNH",
-        "WMT",
-        "GE",
-        "BA",
-        "TXN",
         "INTC",
         "ARM",
-        "BRK-B"
+        "CRWD",
+        "BRK-B",
+        "WMT",
+        "BA"
     ]
 }
