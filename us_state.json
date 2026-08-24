@@ -1,6 +1,6 @@
 {
     "date": "2026-08-24",
-    "signal_count": 10,
+    "signal_count": 11,
     "summary_sent": false,
     "alerted": [
         "AVGO",
@@ -12,6 +12,7 @@
         "BA",
         "USD",
         "NVDL",
-        "TXN"
+        "TXN",
+        "GE"
     ]
 }
