@@ -1,7 +1,7 @@
 {
     "date": "2026-08-26",
     "signal_count": 9,
-    "summary_sent": false,
+    "summary_sent": true,
     "alerted": [
         "AVGO",
         "TXN",
