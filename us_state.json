@@ -1,20 +1,14 @@
 {
-    "date": "2026-08-25",
-    "signal_count": 13,
-    "summary_sent": true,
+    "date": "2026-08-26",
+    "signal_count": 7,
+    "summary_sent": false,
     "alerted": [
-        "USD",
-        "NVDL",
-        "NVDA",
         "AVGO",
         "TXN",
         "INTC",
-        "ARM",
         "CRWD",
+        "PANW",
         "DDOG",
-        "GE",
-        "BA",
-        "WMT",
-        "PANW"
+        "BA"
     ]
 }
