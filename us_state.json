@@ -1,6 +1,6 @@
 {
     "date": "2026-08-26",
-    "signal_count": 7,
+    "signal_count": 9,
     "summary_sent": false,
     "alerted": [
         "AVGO",
@@ -9,6 +9,8 @@
         "CRWD",
         "PANW",
         "DDOG",
-        "BA"
+        "BA",
+        "ARM",
+        "WMT"
     ]
 }
