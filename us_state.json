@@ -1,9 +1,8 @@
 {
-    "date": "2026-08-27",
-    "signal_count": 3,
-    "summary_sent": true,
+    "date": "2026-08-28",
+    "signal_count": 2,
+    "summary_sent": false,
     "alerted": [
-        "MCD",
         "WMT",
         "BA"
     ]
