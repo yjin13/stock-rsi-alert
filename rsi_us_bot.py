@@ -10,7 +10,7 @@ import holidays
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "본인의_CHAT_ID_입력")
 STATE_FILE = "us_state.json"
-RSI_THRESHOLD = 35.0  # <--- 🎯 원하는 RSI 수치
+RSI_THRESHOLD = 35.0  # 🎯 원하는 RSI 수치
 
 class USAmericaRSIBot:
     def __init__(self, token, chat_id):
@@ -26,9 +26,7 @@ class USAmericaRSIBot:
 
     def load_state(self):
         session_date = self.get_session_date()
-        # 💡 'alerted' 리스트 추가!
         default_state = {"date": session_date, "signal_count": 0, "summary_sent": False, "alerted": []}
-
         if os.path.exists(STATE_FILE):
             try:
                 with open(STATE_FILE, "r", encoding="utf-8") as f:
@@ -107,37 +105,35 @@ class USAmericaRSIBot:
             "CVX": "쉐브론", "BA": "보잉"
         }
 
-        # 🌟 내 관심 종목 (여기에 밈주식이나 관심 종목 자유 추가)
         my_favorites = {
+            "GME": "게임스탑",
+            "AMC": "AMC 엔터테인먼트",
+            "RDDT": "레딧",
+            "DJT": "트럼프 미디어"
         }
         
         base_stocks.update(my_favorites)
         return base_stocks
 
     def calc_tradingview_rsi(self, close_series, period=14):
-        closes = close_series.tolist()
-        if len(closes) < period + 5:
-            return None
-        gains, losses = [], []
-        for i in range(1, len(closes)):
-            delta = closes[i] - closes[i - 1]
-            gains.append(max(0.0, delta))
-            losses.append(max(0.0, -delta))
-            
-        avg_gain = sum(gains[:period]) / period
-        avg_loss = sum(losses[:period]) / period
+        # 💡 국내 HTS(키움증권 등) 전용 EMA 방식 계산
+        delta = close_series.diff(1)
+        up = delta.clip(lower=0)
+        down = -1 * delta.clip(upper=0)
         
-        for i in range(period, len(gains)):
-            avg_gain = (avg_gain * (period - 1) + gains[i]) / period
-            avg_loss = (avg_loss * (period - 1) + losses[i]) / period
-            
-        if avg_loss == 0:
-            return 100.0
-        rs = avg_gain / avg_loss
-        return float(100.0 - (100.0 / (1.0 + rs)))
+        roll_up = up.ewm(span=period, adjust=False).mean()
+        roll_down = down.ewm(span=period, adjust=False).mean()
+        
+        rs = roll_up / roll_down
+        rsi = 100.0 - (100.0 / (1.0 + rs))
+        
+        if pd.isna(rsi.iloc[-1]):
+            return None
+        return float(rsi.iloc[-1])
 
     def fetch_us_4h_rsi(self, ticker, period=14):
         yf_ticker = ticker.replace(".", "-") 
+        
         df = yf.download(yf_ticker, period="730d", interval="1h", prepost=False, progress=False)
         if df.empty or len(df) < 50:
             return None, None
@@ -152,6 +148,17 @@ class USAmericaRSIBot:
             "Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"
         }).dropna()
         
+        # 🔥 야후 1h 딜레이 무시하고 '실시간 1분봉 가격' 강제 주입
+        try:
+            live_data = yf.download(yf_ticker, period="1d", interval="1m", progress=False)
+            if not live_data.empty:
+                if isinstance(live_data.columns, pd.MultiIndex):
+                    live_data.columns = live_data.columns.get_level_values(0)
+                live_price = float(live_data["Close"].iloc[-1])
+                df_4h.iloc[-1, df_4h.columns.get_loc("Close")] = live_price
+        except Exception:
+            pass
+
         rsi_val = self.calc_tradingview_rsi(df_4h["Close"], period)
         if rsi_val is None:
             return None, None
@@ -172,16 +179,15 @@ class USAmericaRSIBot:
 
         print(f" [🇺🇸 미국장 스캐너 실행] KST 시간: {check_time_str}")
 
-        # 💡 겨울철(표준시) 장 마감 시간인 UTC 21시까지 커버하도록 '21' 추가!
+        # 💡 겨울철 1시간 누락을 막기 위한 '21' 시간대 추가
         if utc_hour in [13, 14, 15, 16, 17, 18, 19, 20, 21]:
             us_stocks = self.get_us_target_stocks()
             for ticker, name in us_stocks.items():
                 try:
                     rsi, close_p = self.fetch_us_4h_rsi(ticker)
-                    # 💡 RSI 40 이하 + 중복 알람 차단!
                     if rsi and rsi <= RSI_THRESHOLD and ticker not in self.state.get("alerted", []):
                         self.send_telegram_alert(name, ticker, rsi, close_p, check_time_str)
-                        self.state["alerted"].append(ticker) # 명단에 추가
+                        self.state["alerted"].append(ticker)
                         self.save_state()
                     time.sleep(0.1)
                 except Exception:

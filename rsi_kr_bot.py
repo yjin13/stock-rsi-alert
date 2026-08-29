@@ -12,7 +12,7 @@ import holidays
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "본인의_CHAT_ID_입력")
 STATE_FILE = "kr_state.json"
-RSI_THRESHOLD = 40.0  # <--- 🎯 원하는 RSI 수치
+RSI_THRESHOLD = 40.0  # 🎯 원하는 RSI 수치
 
 class KoreaRSIBot:
     def __init__(self, token, chat_id):
@@ -24,16 +24,13 @@ class KoreaRSIBot:
     def load_state(self):
         kst_now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
         today_str = kst_now.strftime('%Y-%m-%d')
-        # 💡 'alerted' (오늘 알람 보낸 종목 기억하기) 리스트 추가!
         default_state = {"date": today_str, "signal_count": 0, "summary_sent": False, "alerted": []}
-
         if os.path.exists(STATE_FILE):
             try:
                 with open(STATE_FILE, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     if data.get("date") != today_str:
                         return default_state
-                    # 기존 파일에 alerted가 없으면 빈 리스트를 넣어줌
                     if "alerted" not in data:
                         data["alerted"] = []
                     return data
@@ -106,26 +103,20 @@ class KoreaRSIBot:
         requests.post(self.api_url, data={"chat_id": self.chat_id, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True})
 
     def calc_tradingview_rsi(self, close_series, period=14):
-        closes = close_series.tolist()
-        if len(closes) < period + 5:
-            return None
-        gains, losses = [], []
-        for i in range(1, len(closes)):
-            delta = closes[i] - closes[i - 1]
-            gains.append(max(0.0, delta))
-            losses.append(max(0.0, -delta))
-            
-        avg_gain = sum(gains[:period]) / period
-        avg_loss = sum(losses[:period]) / period
+        # 💡 국내 HTS(키움증권 등) 전용 EMA 방식 계산
+        delta = close_series.diff(1)
+        up = delta.clip(lower=0)
+        down = -1 * delta.clip(upper=0)
         
-        for i in range(period, len(gains)):
-            avg_gain = (avg_gain * (period - 1) + gains[i]) / period
-            avg_loss = (avg_loss * (period - 1) + losses[i]) / period
-            
-        if avg_loss == 0:
-            return 100.0
-        rs = avg_gain / avg_loss
-        return float(100.0 - (100.0 / (1.0 + rs)))
+        roll_up = up.ewm(span=period, adjust=False).mean()
+        roll_down = down.ewm(span=period, adjust=False).mean()
+        
+        rs = roll_up / roll_down
+        rsi = 100.0 - (100.0 / (1.0 + rs))
+        
+        if pd.isna(rsi.iloc[-1]):
+            return None
+        return float(rsi.iloc[-1])
 
     def fetch_kr_4h_rsi(self, code, period=14):
         url = f"https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=60&count=2000&requestType=1"
@@ -172,10 +163,9 @@ class KoreaRSIBot:
             for code, name in kr_stocks.items():
                 try:
                     rsi, close_p = self.fetch_kr_4h_rsi(code)
-                    # 💡 RSI가 40 이하이면서, 오늘 아직 알람을 안 보낸 종목일 때만 전송!
                     if rsi and rsi <= RSI_THRESHOLD and code not in self.state.get("alerted", []):
                         self.send_telegram_alert(name, code, rsi, close_p, check_time_str)
-                        self.state["alerted"].append(code) # 명단에 추가
+                        self.state["alerted"].append(code)
                         self.save_state()
                     time.sleep(0.05)
                 except Exception:
