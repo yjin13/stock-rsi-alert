@@ -1,7 +1,7 @@
 {
     "date": "2026-08-31",
     "signal_count": 17,
-    "summary_sent": false,
+    "summary_sent": true,
     "alerted": [
         "ASML",
         "LLY",
