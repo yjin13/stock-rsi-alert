@@ -1,9 +1,15 @@
 {
-    "date": "2026-08-28",
-    "signal_count": 2,
+    "date": "2026-08-31",
+    "signal_count": 8,
     "summary_sent": false,
     "alerted": [
+        "ASML",
+        "LLY",
+        "NVO",
+        "ABBV",
         "WMT",
+        "CAT",
+        "GE",
         "BA"
     ]
 }
