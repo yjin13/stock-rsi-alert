@@ -1,6 +1,6 @@
 {
     "date": "2026-08-31",
-    "signal_count": 16,
+    "signal_count": 17,
     "summary_sent": false,
     "alerted": [
         "ASML",
@@ -18,6 +18,7 @@
         "UBER",
         "UNH",
         "SOXL",
-        "ARM"
+        "ARM",
+        "KO"
     ]
 }
