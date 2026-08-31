@@ -1,6 +1,6 @@
 {
     "date": "2026-08-31",
-    "signal_count": 8,
+    "signal_count": 10,
     "summary_sent": false,
     "alerted": [
         "ASML",
@@ -10,6 +10,8 @@
         "WMT",
         "CAT",
         "GE",
-        "BA"
+        "BA",
+        "TLT",
+        "TMF"
     ]
 }
