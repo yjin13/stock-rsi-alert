@@ -1,7 +1,7 @@
 {
     "date": "2026-09-01",
     "signal_count": 29,
-    "summary_sent": false,
+    "summary_sent": true,
     "alerted": [
         "ASML",
         "UBER",
