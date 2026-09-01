@@ -1,6 +1,6 @@
 {
     "date": "2026-09-01",
-    "signal_count": 27,
+    "signal_count": 28,
     "summary_sent": false,
     "alerted": [
         "ASML",
@@ -29,6 +29,7 @@
         "ARM",
         "MCD",
         "DDOG",
-        "TMF"
+        "TMF",
+        "PEP"
     ]
 }
