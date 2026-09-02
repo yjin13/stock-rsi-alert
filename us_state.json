@@ -1,6 +1,6 @@
 {
     "date": "2026-09-02",
-    "signal_count": 23,
+    "signal_count": 30,
     "summary_sent": false,
     "alerted": [
         "SPY",
@@ -25,6 +25,13 @@
         "KO",
         "CAT",
         "GE",
-        "BA"
+        "BA",
+        "QQQ",
+        "AMZN",
+        "AMD",
+        "PLTR",
+        "SNOW",
+        "PANW",
+        "COST"
     ]
 }
