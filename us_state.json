@@ -1,6 +1,6 @@
 {
     "date": "2026-09-02",
-    "signal_count": 31,
+    "signal_count": 32,
     "summary_sent": false,
     "alerted": [
         "SPY",
@@ -33,6 +33,7 @@
         "SNOW",
         "PANW",
         "COST",
-        "INTC"
+        "INTC",
+        "NET"
     ]
 }
