@@ -1,6 +1,6 @@
 {
     "date": "2026-09-03",
-    "signal_count": 17,
+    "signal_count": 19,
     "summary_sent": false,
     "alerted": [
         "SOXX",
@@ -19,6 +19,8 @@
         "GE",
         "AVGO",
         "ASML",
-        "TXN"
+        "TXN",
+        "TSM",
+        "PEP"
     ]
 }
