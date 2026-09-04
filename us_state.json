@@ -1,6 +1,6 @@
 {
     "date": "2026-09-04",
-    "signal_count": 7,
+    "signal_count": 9,
     "summary_sent": false,
     "alerted": [
         "SOXL",
@@ -9,6 +9,8 @@
         "DDOG",
         "LLY",
         "MCD",
-        "COST"
+        "COST",
+        "ADBE",
+        "PEP"
     ]
 }
