@@ -1,7 +1,7 @@
 {
     "date": "2026-09-04",
     "signal_count": 14,
-    "summary_sent": false,
+    "summary_sent": true,
     "alerted": [
         "SOXL",
         "AVGO",
