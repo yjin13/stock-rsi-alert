@@ -10,7 +10,7 @@ import holidays
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "본인의_CHAT_ID_입력")
 STATE_FILE = "us_state.json"
-RSI_THRESHOLD = 35.0  # 🎯 원하는 RSI 수치
+RSI_THRESHOLD = 30.0  # 🎯 원하는 RSI 수치
 
 class USAmericaRSIBot:
     def __init__(self, token, chat_id):
