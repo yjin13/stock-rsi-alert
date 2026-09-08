@@ -1,21 +1,13 @@
 {
-    "date": "2026-09-04",
-    "signal_count": 14,
-    "summary_sent": true,
+    "date": "2026-09-08",
+    "signal_count": 6,
+    "summary_sent": false,
     "alerted": [
-        "SOXL",
-        "AVGO",
-        "ASML",
-        "DDOG",
-        "LLY",
-        "MCD",
-        "COST",
         "ADBE",
-        "PEP",
-        "SQQQ",
-        "SOXS",
-        "PANW",
         "NFLX",
-        "KO"
+        "LLY",
+        "PEP",
+        "MCD",
+        "COST"
     ]
 }
