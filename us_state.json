@@ -1,6 +1,6 @@
 {
     "date": "2026-09-09",
-    "signal_count": 15,
+    "signal_count": 17,
     "summary_sent": false,
     "alerted": [
         "SOXS",
@@ -17,6 +17,8 @@
         "GOOGL",
         "JPM",
         "V",
-        "PG"
+        "PG",
+        "UNH",
+        "GE"
     ]
 }
