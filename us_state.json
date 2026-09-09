@@ -1,7 +1,7 @@
 {
     "date": "2026-09-09",
     "signal_count": 23,
-    "summary_sent": false,
+    "summary_sent": true,
     "alerted": [
         "SOXS",
         "SCHD",
