@@ -1,6 +1,6 @@
 {
     "date": "2026-09-10",
-    "signal_count": 26,
+    "signal_count": 28,
     "summary_sent": false,
     "alerted": [
         "DIA",
@@ -28,6 +28,8 @@
         "DJT",
         "QLD",
         "FNGU",
-        "PLTR"
+        "PLTR",
+        "BA",
+        "AMC"
     ]
 }
