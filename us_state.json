@@ -1,7 +1,7 @@
 {
     "date": "2026-09-11",
     "signal_count": 20,
-    "summary_sent": false,
+    "summary_sent": true,
     "alerted": [
         "SPY",
         "DIA",
