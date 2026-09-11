@@ -1,6 +1,6 @@
 {
     "date": "2026-09-11",
-    "signal_count": 19,
+    "signal_count": 20,
     "summary_sent": false,
     "alerted": [
         "SPY",
@@ -21,6 +21,7 @@
         "AMC",
         "UNH",
         "UBER",
-        "GE"
+        "GE",
+        "JNJ"
     ]
 }
