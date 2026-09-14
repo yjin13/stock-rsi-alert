@@ -1,6 +1,6 @@
 {
     "date": "2026-09-14",
-    "signal_count": 15,
+    "signal_count": 16,
     "summary_sent": false,
     "alerted": [
         "TLT",
@@ -17,6 +17,7 @@
         "AVGO",
         "ASML",
         "MU",
-        "GE"
+        "GE",
+        "UBER"
     ]
 }
