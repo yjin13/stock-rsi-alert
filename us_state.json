@@ -1,27 +1,15 @@
 {
-    "date": "2026-09-11",
-    "signal_count": 20,
-    "summary_sent": true,
+    "date": "2026-09-14",
+    "signal_count": 8,
+    "summary_sent": false,
     "alerted": [
-        "SPY",
-        "DIA",
-        "UPRO",
         "TLT",
         "TMF",
-        "SCHD",
-        "PLTR",
         "ADBE",
-        "NFLX",
         "LLY",
-        "NVO",
-        "PEP",
-        "MCD",
-        "COST",
-        "BA",
-        "AMC",
         "UNH",
-        "UBER",
-        "GE",
-        "JNJ"
+        "NVO",
+        "JNJ",
+        "MCD"
     ]
 }
