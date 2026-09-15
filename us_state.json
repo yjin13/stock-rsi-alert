@@ -1,6 +1,6 @@
 {
     "date": "2026-09-15",
-    "signal_count": 14,
+    "signal_count": 17,
     "summary_sent": false,
     "alerted": [
         "SOXL",
@@ -16,6 +16,9 @@
         "NVO",
         "JNJ",
         "PEP",
-        "UNH"
+        "UNH",
+        "DIA",
+        "AMZN",
+        "JPM"
     ]
 }
