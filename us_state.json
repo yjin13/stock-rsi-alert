@@ -1,6 +1,6 @@
 {
     "date": "2026-09-16",
-    "signal_count": 15,
+    "signal_count": 18,
     "summary_sent": false,
     "alerted": [
         "TQQQ",
@@ -17,6 +17,9 @@
         "HOOD",
         "UBER",
         "MCD",
-        "BA"
+        "BA",
+        "DIA",
+        "SCHD",
+        "COST"
     ]
 }
