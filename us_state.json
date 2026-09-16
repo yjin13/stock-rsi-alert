@@ -1,27 +1,18 @@
 {
-    "date": "2026-09-15",
-    "signal_count": 20,
-    "summary_sent": true,
+    "date": "2026-09-16",
+    "signal_count": 11,
+    "summary_sent": false,
     "alerted": [
-        "SOXL",
+        "TQQQ",
         "USD",
         "NVDL",
         "NVDA",
+        "AMZN",
         "AVGO",
         "ASML",
-        "MU",
-        "GE",
-        "TLT",
-        "TMF",
-        "NVO",
-        "JNJ",
-        "PEP",
         "UNH",
-        "DIA",
-        "AMZN",
-        "JPM",
-        "TSM",
-        "TQQQ",
-        "QLD"
+        "NVO",
+        "PEP",
+        "GE"
     ]
 }
