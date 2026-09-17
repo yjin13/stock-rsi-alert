@@ -1,7 +1,7 @@
 {
     "date": "2026-09-17",
-    "signal_count": 13,
-    "summary_sent": false,
+    "signal_count": 14,
+    "summary_sent": true,
     "alerted": [
         "DIA",
         "SCHD",
@@ -15,6 +15,7 @@
         "COST",
         "BA",
         "ADBE",
-        "UBER"
+        "UBER",
+        "NFLX"
     ]
 }
