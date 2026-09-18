@@ -1,12 +1,15 @@
 {
     "date": "2026-09-18",
-    "signal_count": 5,
+    "signal_count": 8,
     "summary_sent": false,
     "alerted": [
         "SCHD",
         "NFLX",
         "PEP",
         "MCD",
-        "BA"
+        "BA",
+        "DIA",
+        "UBER",
+        "CRM"
     ]
 }
