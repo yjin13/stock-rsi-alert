@@ -1,7 +1,7 @@
 {
     "date": "2026-09-21",
-    "signal_count": 13,
-    "summary_sent": false,
+    "signal_count": 14,
+    "summary_sent": true,
     "alerted": [
         "SOXS",
         "SCHD",
@@ -15,6 +15,7 @@
         "MCD",
         "COST",
         "XOM",
-        "CVX"
+        "CVX",
+        "BRK-B"
     ]
 }
