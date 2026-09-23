@@ -1,22 +1,16 @@
 {
-    "date": "2026-09-22",
-    "signal_count": 15,
-    "summary_sent": true,
+    "date": "2026-09-23",
+    "signal_count": 9,
+    "summary_sent": false,
     "alerted": [
         "SQQQ",
         "SOXS",
-        "CRM",
-        "BRK-B",
-        "NVO",
-        "PEP",
-        "MCD",
-        "XOM",
-        "CVX",
         "ADBE",
-        "NFLX",
         "UBER",
+        "CRM",
         "JPM",
         "V",
-        "BA"
+        "NVO",
+        "CVX"
     ]
 }
