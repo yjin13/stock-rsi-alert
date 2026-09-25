@@ -1,21 +1,17 @@
 {
-    "date": "2026-09-24",
-    "signal_count": 14,
-    "summary_sent": true,
+    "date": "2026-09-25",
+    "signal_count": 10,
+    "summary_sent": false,
     "alerted": [
+        "DIA",
         "SQQQ",
         "SOXS",
-        "SCHD",
-        "ADBE",
-        "UBER",
-        "NFLX",
-        "JPM",
-        "V",
-        "NVO",
-        "MCD",
-        "DIA",
-        "TMF",
         "TLT",
-        "PEP"
+        "TMF",
+        "SCHD",
+        "UBER",
+        "NVO",
+        "PEP",
+        "MCD"
     ]
 }
