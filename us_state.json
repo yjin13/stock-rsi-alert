@@ -1,6 +1,6 @@
 {
     "date": "2026-09-25",
-    "signal_count": 10,
+    "signal_count": 11,
     "summary_sent": false,
     "alerted": [
         "DIA",
@@ -12,6 +12,7 @@
         "UBER",
         "NVO",
         "PEP",
-        "MCD"
+        "MCD",
+        "NFLX"
     ]
 }
