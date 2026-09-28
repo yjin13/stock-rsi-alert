@@ -1,6 +1,6 @@
 {
     "date": "2026-09-28",
-    "signal_count": 8,
+    "signal_count": 16,
     "summary_sent": false,
     "alerted": [
         "SQQQ",
@@ -10,6 +10,14 @@
         "SCHD",
         "ADBE",
         "NFLX",
-        "MCD"
+        "MCD",
+        "AMZN",
+        "SNOW",
+        "NOW",
+        "UBER",
+        "CRM",
+        "NVO",
+        "PEP",
+        "BA"
     ]
 }
