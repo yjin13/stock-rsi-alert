@@ -1,25 +1,20 @@
 {
-    "date": "2026-09-28",
-    "signal_count": 18,
-    "summary_sent": true,
+    "date": "2026-09-29",
+    "signal_count": 13,
+    "summary_sent": false,
     "alerted": [
-        "SQQQ",
-        "SOXS",
         "TLT",
         "TMF",
+        "TSLL",
         "SCHD",
-        "ADBE",
-        "NFLX",
-        "MCD",
-        "AMZN",
-        "SNOW",
+        "TSLA",
         "NOW",
+        "ADBE",
         "UBER",
+        "NFLX",
         "CRM",
         "NVO",
-        "PEP",
-        "BA",
-        "TSLL",
-        "TSLA"
+        "MCD",
+        "BA"
     ]
 }
