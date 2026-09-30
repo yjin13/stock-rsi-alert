@@ -1,6 +1,6 @@
 {
     "date": "2026-09-30",
-    "signal_count": 9,
+    "signal_count": 12,
     "summary_sent": false,
     "alerted": [
         "TLT",
@@ -11,6 +11,9 @@
         "CRM",
         "NVO",
         "MCD",
-        "JPM"
+        "JPM",
+        "V",
+        "BRK-B",
+        "UNH"
     ]
 }
