@@ -1,6 +1,6 @@
 {
     "date": "2026-10-01",
-    "signal_count": 16,
+    "signal_count": 19,
     "summary_sent": false,
     "alerted": [
         "DIA",
@@ -18,6 +18,9 @@
         "MCD",
         "WMT",
         "KO",
-        "BA"
+        "BA",
+        "NFLX",
+        "JNJ",
+        "ABBV"
     ]
 }
