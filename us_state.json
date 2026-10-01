@@ -1,7 +1,7 @@
 {
     "date": "2026-10-01",
-    "signal_count": 24,
-    "summary_sent": false,
+    "signal_count": 25,
+    "summary_sent": true,
     "alerted": [
         "DIA",
         "TLT",
@@ -26,6 +26,7 @@
         "PG",
         "DJT",
         "SOXS",
-        "LLY"
+        "LLY",
+        "AVGO"
     ]
 }
