@@ -1,6 +1,6 @@
 {
     "date": "2026-10-01",
-    "signal_count": 21,
+    "signal_count": 22,
     "summary_sent": false,
     "alerted": [
         "DIA",
@@ -23,6 +23,7 @@
         "JNJ",
         "ABBV",
         "UBER",
-        "PG"
+        "PG",
+        "DJT"
     ]
 }
