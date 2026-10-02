@@ -1,6 +1,6 @@
 {
     "date": "2026-10-02",
-    "signal_count": 22,
+    "signal_count": 23,
     "summary_sent": false,
     "alerted": [
         "DIA",
@@ -24,6 +24,7 @@
         "GE",
         "CONL",
         "COIN",
-        "LLY"
+        "LLY",
+        "TMF"
     ]
 }
