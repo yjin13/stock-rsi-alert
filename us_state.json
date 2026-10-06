@@ -1,20 +1,11 @@
 {
-    "date": "2026-10-05",
-    "signal_count": 13,
-    "summary_sent": true,
+    "date": "2026-10-06",
+    "signal_count": 4,
+    "summary_sent": false,
     "alerted": [
         "SQQQ",
         "SOXS",
-        "TLT",
-        "NFLX",
-        "NVO",
         "JNJ",
-        "PEP",
-        "MCD",
-        "KO",
-        "GE",
-        "TMF",
-        "SCHD",
-        "WMT"
+        "GE"
     ]
 }
