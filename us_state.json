@@ -1,11 +1,12 @@
 {
     "date": "2026-10-06",
-    "signal_count": 4,
+    "signal_count": 5,
     "summary_sent": false,
     "alerted": [
         "SQQQ",
         "SOXS",
         "JNJ",
-        "GE"
+        "GE",
+        "NVO"
     ]
 }
