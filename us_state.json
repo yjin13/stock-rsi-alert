@@ -1,11 +1,18 @@
 {
     "date": "2026-10-07",
-    "signal_count": 4,
+    "signal_count": 11,
     "summary_sent": false,
     "alerted": [
         "SQQQ",
         "SOXS",
         "INTC",
-        "JNJ"
+        "JNJ",
+        "TLT",
+        "TMF",
+        "CONL",
+        "MU",
+        "HOOD",
+        "JPM",
+        "DJT"
     ]
 }
