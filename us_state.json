@@ -1,25 +1,16 @@
 {
-    "date": "2026-10-07",
-    "signal_count": 18,
-    "summary_sent": true,
+    "date": "2026-10-08",
+    "signal_count": 9,
+    "summary_sent": false,
     "alerted": [
         "SQQQ",
-        "SOXS",
-        "INTC",
-        "JNJ",
-        "TLT",
-        "TMF",
         "CONL",
-        "MU",
+        "COIN",
         "HOOD",
         "JPM",
-        "DJT",
-        "QCOM",
-        "ADBE",
-        "COIN",
-        "CRM",
         "PEP",
+        "MCD",
         "GE",
-        "MCD"
+        "DJT"
     ]
 }
