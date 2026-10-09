@@ -1,12 +1,13 @@
 {
     "date": "2026-10-09",
-    "signal_count": 5,
+    "signal_count": 6,
     "summary_sent": false,
     "alerted": [
         "CONL",
         "INTC",
         "COIN",
         "HOOD",
-        "DJT"
+        "DJT",
+        "ARM"
     ]
 }
