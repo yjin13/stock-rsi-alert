@@ -1,6 +1,6 @@
 {
     "date": "2026-10-12",
-    "signal_count": 10,
+    "signal_count": 11,
     "summary_sent": false,
     "alerted": [
         "INTC",
@@ -12,6 +12,7 @@
         "NVDL",
         "NVDA",
         "AMD",
-        "MU"
+        "MU",
+        "TSM"
     ]
 }
