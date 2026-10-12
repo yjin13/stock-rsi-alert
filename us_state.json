@@ -1,10 +1,17 @@
 {
     "date": "2026-10-12",
-    "signal_count": 3,
+    "signal_count": 10,
     "summary_sent": false,
     "alerted": [
         "INTC",
         "ARM",
-        "DJT"
+        "DJT",
+        "SOXX",
+        "SOXL",
+        "USD",
+        "NVDL",
+        "NVDA",
+        "AMD",
+        "MU"
     ]
 }
