@@ -1,6 +1,6 @@
 {
     "date": "2026-10-13",
-    "signal_count": 11,
+    "signal_count": 14,
     "summary_sent": false,
     "alerted": [
         "SOXX",
@@ -13,6 +13,9 @@
         "MU",
         "INTC",
         "ARM",
-        "DJT"
+        "DJT",
+        "AMD",
+        "SMCI",
+        "CAT"
     ]
 }
