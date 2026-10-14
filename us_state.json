@@ -1,6 +1,6 @@
 {
     "date": "2026-10-14",
-    "signal_count": 17,
+    "signal_count": 23,
     "summary_sent": false,
     "alerted": [
         "MU",
@@ -19,6 +19,12 @@
         "QLD",
         "NVDA",
         "TQQQ",
-        "MSTR"
+        "MSTR",
+        "QQQ",
+        "AMD",
+        "CRWD",
+        "HOOD",
+        "NET",
+        "BA"
     ]
 }
