@@ -1,6 +1,6 @@
 {
     "date": "2026-10-14",
-    "signal_count": 15,
+    "signal_count": 17,
     "summary_sent": false,
     "alerted": [
         "MU",
@@ -17,6 +17,8 @@
         "PANW",
         "CAT",
         "QLD",
-        "NVDA"
+        "NVDA",
+        "TQQQ",
+        "MSTR"
     ]
 }
