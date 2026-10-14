@@ -1,7 +1,7 @@
 {
     "date": "2026-10-14",
     "signal_count": 27,
-    "summary_sent": false,
+    "summary_sent": true,
     "alerted": [
         "MU",
         "INTC",
