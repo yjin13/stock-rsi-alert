@@ -1,6 +1,6 @@
 {
     "date": "2026-10-14",
-    "signal_count": 25,
+    "signal_count": 27,
     "summary_sent": false,
     "alerted": [
         "MU",
@@ -27,6 +27,8 @@
         "NET",
         "BA",
         "FNGU",
-        "AVGO"
+        "AVGO",
+        "UPRO",
+        "CONL"
     ]
 }
