@@ -1,6 +1,6 @@
 {
     "date": "2026-10-15",
-    "signal_count": 25,
+    "signal_count": 32,
     "summary_sent": false,
     "alerted": [
         "QQQ",
@@ -27,6 +27,13 @@
         "NET",
         "CAT",
         "BA",
-        "DJT"
+        "DJT",
+        "UPRO",
+        "TSLL",
+        "CONL",
+        "TSLA",
+        "SNOW",
+        "COIN",
+        "DDOG"
     ]
 }
