@@ -1,6 +1,6 @@
 {
     "date": "2026-10-16",
-    "signal_count": 24,
+    "signal_count": 27,
     "summary_sent": false,
     "alerted": [
         "QQQ",
@@ -26,6 +26,9 @@
         "MU",
         "ARM",
         "SNOW",
-        "DDOG"
+        "DDOG",
+        "TSLL",
+        "TSLA",
+        "PLTR"
     ]
 }
