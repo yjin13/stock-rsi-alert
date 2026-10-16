@@ -1,6 +1,6 @@
 {
     "date": "2026-10-16",
-    "signal_count": 17,
+    "signal_count": 22,
     "summary_sent": false,
     "alerted": [
         "QQQ",
@@ -19,6 +19,11 @@
         "PANW",
         "NET",
         "CAT",
-        "DJT"
+        "DJT",
+        "FNGU",
+        "AVGO",
+        "AMD",
+        "MU",
+        "ARM"
     ]
 }
