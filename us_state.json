@@ -1,6 +1,6 @@
 {
     "date": "2026-10-16",
-    "signal_count": 28,
+    "signal_count": 29,
     "summary_sent": false,
     "alerted": [
         "QQQ",
@@ -30,6 +30,7 @@
         "TSLL",
         "TSLA",
         "PLTR",
-        "MSTR"
+        "MSTR",
+        "HOOD"
     ]
 }
