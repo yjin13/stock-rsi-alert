@@ -1,6 +1,6 @@
 {
     "date": "2026-10-16",
-    "signal_count": 22,
+    "signal_count": 24,
     "summary_sent": false,
     "alerted": [
         "QQQ",
@@ -24,6 +24,8 @@
         "AVGO",
         "AMD",
         "MU",
-        "ARM"
+        "ARM",
+        "SNOW",
+        "DDOG"
     ]
 }
