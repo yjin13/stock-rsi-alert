@@ -1,6 +1,6 @@
 {
     "date": "2026-10-16",
-    "signal_count": 32,
+    "signal_count": 33,
     "summary_sent": false,
     "alerted": [
         "QQQ",
@@ -34,6 +34,7 @@
         "HOOD",
         "GOOGL",
         "SPY",
-        "UPRO"
+        "UPRO",
+        "AMZN"
     ]
 }
