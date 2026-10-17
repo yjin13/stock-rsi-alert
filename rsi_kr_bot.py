@@ -1,25 +1,37 @@
 import os
 import re
-import time
 import json
 import datetime
 import requests
-import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
 import pandas as pd
 import holidays
+from kis_client import KISClient
+from rsi_common import BarCache, wilder_rsi, resample_4h_close, split_complete
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "본인의_CHAT_ID_입력")
+KIS_APP_KEY = os.environ.get("KIS_APP_KEY", "")
+KIS_APP_SECRET = os.environ.get("KIS_APP_SECRET", "")
 STATE_FILE = "kr_state.json"
-RSI_THRESHOLD = 40.0  # 🎯 원하는 RSI 수치
+CACHE_FILE = "kr_4h_cache.json"  # 종목별 '완성된' 4시간봉 종가 캐시(증분 갱신용)
+RSI_THRESHOLD = 30.0  # 🎯 원하는 RSI 수치
+KR_SESSION_CLOSE = datetime.time(15, 30)
+BAR_ORIGIN = "2024-01-01 09:00:00"  # 4시간봉 경계: 09:00~13:00, 13:00~15:30
+MIN_4H_BARS = 100  # RSI 수렴을 위한 최소 4시간봉 개수
+BACKFILL_DAYS = 100  # 신규 종목 백필 구간(달력일, 약 140개 4시간봉)
+BACKFILL_LIMIT = int(os.environ.get("KR_BACKFILL_LIMIT", "20"))  # 실행당 신규 종목 백필 한도
+INCLUDE_FORMING_BAR = True  # 진행 중인 4시간봉도 RSI에 반영(HTS 화면·실시간 알림 기준)
 
 class KoreaRSIBot:
-    def __init__(self, token, chat_id):
+    def __init__(self, token, chat_id, kis):
         self.token = token
         self.chat_id = chat_id
+        self.kis = kis
         self.api_url = f"https://api.telegram.org/bot{self.token}/sendMessage"
         self.state = self.load_state()
+        self.cache = BarCache(CACHE_FILE)
+        self.backfill_budget = BACKFILL_LIMIT
 
     def load_state(self):
         kst_now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
@@ -53,10 +65,10 @@ class KoreaRSIBot:
 
     def get_kr_top100(self):
         urls = [
-            "https://finance.naver.com/sise/sise_quant.naver",             
-            "https://finance.naver.com/sise/sise_quant.naver?sosok=1",     
-            "https://finance.naver.com/sise/sise_quant_high.naver",        
-            "https://finance.naver.com/sise/sise_quant_high.naver?sosok=1" 
+            "https://finance.naver.com/sise/sise_quant.naver",
+            "https://finance.naver.com/sise/sise_quant.naver?sosok=1",
+            "https://finance.naver.com/sise/sise_quant_high.naver",
+            "https://finance.naver.com/sise/sise_quant_high.naver?sosok=1"
         ]
         headers = {"User-Agent": "Mozilla/5.0"}
         stocks = {}
@@ -78,11 +90,10 @@ class KoreaRSIBot:
         self.save_state()
         message = (
             f"🚨 <b>🇰🇷 [한국장 4H RSI {int(RSI_THRESHOLD)} 이하 감지]</b>\n\n"
-            f"• <b>기준 시간:</b> {check_time}\n"
             f"• <b>종목명:</b> <a href='{url_link}'>{name}</a> (<code>{code}</code>)\n"
             f"• <b>4시간봉 RSI:</b> <code>{rsi_val:.2f}</code>\n"
-            f"• <b>현재가:</b> {int(close_p):,}원\n\n"
-            f"👉 <a href='{url_link}'>실시간 차트 확인하기</a>"
+            f"• <b>현재가:</b> {int(close_p):,}원\n"
+            f"• <b>기준 시간:</b> {check_time}"
         )
         requests.post(self.api_url, data={"chat_id": self.chat_id, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True})
 
@@ -97,61 +108,52 @@ class KoreaRSIBot:
         message = (
             f"📈 <b>🇰🇷 [한국장 일일 마감 보고]</b>\n\n"
             f"• <b>기준 날짜:</b> {date_str}\n"
-            f"• <b>스캔 결과:</b> {result_text}\n\n"
-            f"<i>(🟢 코스피/코스닥 스캐너 정상 작동 중)</i>"
+            f"• <b>스캔 결과:</b> {result_text}"
         )
         requests.post(self.api_url, data={"chat_id": self.chat_id, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True})
 
-    def calc_tradingview_rsi(self, close_series, period=14):
-        # 💡 국내 HTS(키움증권 등) 전용 EMA 방식 계산
-        delta = close_series.diff(1)
-        up = delta.clip(lower=0)
-        down = -1 * delta.clip(upper=0)
-        
-        roll_up = up.ewm(span=period, adjust=False).mean()
-        roll_down = down.ewm(span=period, adjust=False).mean()
-        
-        rs = roll_up / roll_down
-        rsi = 100.0 - (100.0 / (1.0 + rs))
-        
-        if pd.isna(rsi.iloc[-1]):
-            return None
-        return float(rsi.iloc[-1])
+    def fetch_kr_4h_rsi(self, code, now, period=14):
+        today_str = now.strftime('%Y-%m-%d')
+        hist = self.cache.closes(code)
 
-    def fetch_kr_4h_rsi(self, code, period=14):
-        url = f"https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=60&count=2000&requestType=1"
-        res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-        if res.status_code != 200:
+        if hist.empty:
+            if self.backfill_budget <= 0:
+                return None, None  # 이번 실행의 백필 한도 초과 → 다음 실행에서 처리
+            self.backfill_budget -= 1
+            start = datetime.datetime.combine((now - datetime.timedelta(days=BACKFILL_DAYS)).date(), datetime.time(9, 0))
+        else:
+            start = (hist.index[-1] + pd.Timedelta(hours=4)).to_pydatetime()  # 첫 미수집 봉 시작
+
+        last_price = None
+        forming = pd.Series(dtype=float)
+        if start <= now:
+            df_1m = self.kis.get_minute_candles(code, start, now)
+            if len(df_1m):
+                complete, forming = split_complete(resample_4h_close(df_1m, BAR_ORIGIN), now, KR_SESSION_CLOSE)
+                hist = complete if hist.empty else pd.concat([hist, complete])
+                hist = hist[~hist.index.duplicated(keep="last")].sort_index()
+                last_price = float(df_1m["close"].iloc[-1])
+
+        if len(hist):
+            self.cache.update(code, hist, today_str)
+
+        series = pd.concat([hist, forming]) if INCLUDE_FORMING_BAR and len(forming) else hist
+        if len(series) < MIN_4H_BARS:
             return None, None
-            
-        root = ET.fromstring(res.text)
-        data = []
-        for item in root.findall(".//item"):
-            raw = item.attrib["data"].split("|")
-            dt = pd.to_datetime(raw[0], format="%Y%m%d%H%M%S")
-            data.append([dt, int(raw[1]), int(raw[2]), int(raw[3]), int(raw[4]), int(raw[5])])
-            
-        if len(data) < 50:
-            return None, None
-            
-        df = pd.DataFrame(data, columns=["datetime", "open", "high", "low", "close", "volume"]).set_index("datetime")
-        df_4h = df.resample("4h", origin="2024-01-01 09:00:00", label="left", closed="left").agg({
-            "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"
-        }).dropna()
-        
-        rsi_val = self.calc_tradingview_rsi(df_4h["close"], period)
+
+        rsi_val = wilder_rsi(series, period)
         if rsi_val is None:
             return None, None
-        return rsi_val, float(df_4h["close"].iloc[-1])
+        return rsi_val, last_price if last_price is not None else float(series.iloc[-1])
 
     def run(self):
         kst_now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
         utc_hour = datetime.datetime.utcnow().hour
         date_str = self.state["date"]
         check_time_str = kst_now.strftime('%Y-%m-%d %H:%M KST')
-        
+
         kr_holidays = holidays.KR()
-        
+
         if kst_now.weekday() >= 5 or kst_now.date() in kr_holidays:
             print(f" [휴장일] 주말 또는 공휴일이므로 한국장 스캐너를 실행하지 않습니다. ({check_time_str})")
             return
@@ -159,21 +161,32 @@ class KoreaRSIBot:
         print(f" [🇰🇷 한국장 스캐너 실행] KST 시간: {check_time_str}")
 
         if utc_hour in [0, 1, 2, 3, 4, 5, 6, 7]:
+            self.kis.issue_token()  # 실패하면 예외로 워크플로를 실패시켜 알 수 있게 한다
             kr_stocks = self.get_kr_top100()
-            for code, name in kr_stocks.items():
-                try:
-                    rsi, close_p = self.fetch_kr_4h_rsi(code)
-                    if rsi and rsi <= RSI_THRESHOLD and code not in self.state.get("alerted", []):
-                        self.send_telegram_alert(name, code, rsi, close_p, check_time_str)
-                        self.state["alerted"].append(code)
-                        self.save_state()
-                    time.sleep(0.05)
-                except Exception:
-                    continue
-            
+            now = kst_now.replace(tzinfo=None)
+            failed = skipped = 0
+            try:
+                for code, name in kr_stocks.items():
+                    try:
+                        rsi, close_p = self.fetch_kr_4h_rsi(code, now)
+                        if rsi is None:
+                            skipped += 1
+                        elif rsi <= RSI_THRESHOLD and code not in self.state.get("alerted", []):
+                            self.send_telegram_alert(name, code, rsi, close_p, check_time_str)
+                            self.state["alerted"].append(code)
+                            self.save_state()
+                    except Exception as e:
+                        failed += 1
+                        print(f" [조회 실패] {name}({code}): {e}")
+            finally:
+                self.cache.prune(pd.Timestamp(now))
+                self.cache.save()  # 중간에 끊겨도 백필 진행분을 보존
+            print(f" [스캔 완료] 대상 {len(kr_stocks)}종목, 데이터 부족/백필 대기 {skipped}종목, 실패 {failed}종목")
+
         if utc_hour in [7, 8, 9] and not self.state["summary_sent"]:
             self.send_daily_summary(date_str, self.state.get("signal_count", 0))
 
 if __name__ == "__main__":
-    bot = KoreaRSIBot(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
+    kis = KISClient(KIS_APP_KEY, KIS_APP_SECRET)
+    bot = KoreaRSIBot(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, kis)
     bot.run()

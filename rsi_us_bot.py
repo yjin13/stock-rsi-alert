@@ -1,23 +1,39 @@
 import os
-import time
 import json
 import datetime
 import requests
 import pandas as pd
-import yfinance as yf
 import holidays
+from zoneinfo import ZoneInfo
+from kis_client import KISClient
+from rsi_common import BarCache, wilder_rsi, resample_4h_close, split_complete
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "본인의_CHAT_ID_입력")
+KIS_APP_KEY = os.environ.get("KIS_APP_KEY", "")
+KIS_APP_SECRET = os.environ.get("KIS_APP_SECRET", "")
 STATE_FILE = "us_state.json"
+CACHE_FILE = "us_4h_cache.json"  # 종목별 '완성된' 4시간봉 종가 + KIS 거래소 코드 캐시
 RSI_THRESHOLD = 30.0  # 🎯 원하는 RSI 수치
+US_SESSION_OPEN = datetime.time(9, 30)
+US_SESSION_CLOSE = datetime.time(16, 0)
+BAR_ORIGIN = "2024-01-01 09:30:00"  # 4시간봉 경계(현지시각): 09:30~13:30, 13:30~16:00
+MIN_4H_BARS = int(os.environ.get("US_MIN_4H_BARS", "100"))  # RSI 수렴을 위한 최소 4시간봉 개수
+BACKFILL_DAYS = 100  # 신규 종목 백필 구간(달력일)
+BACKFILL_LIMIT = int(os.environ.get("US_BACKFILL_LIMIT", "8"))  # 실행당 신규 종목 백필 한도(해외는 호출이 느림)
+NMIN = int(os.environ.get("KIS_US_NMIN", "1"))  # 요청 분봉 단위. 1이 가장 안전하고, 키우면 호출 수가 줄어든다
+INCLUDE_FORMING_BAR = True  # 진행 중인 4시간봉도 RSI에 반영(HTS 화면·실시간 알림 기준)
+NY = ZoneInfo("America/New_York")
 
 class USAmericaRSIBot:
-    def __init__(self, token, chat_id):
+    def __init__(self, token, chat_id, kis):
         self.token = token
         self.chat_id = chat_id
+        self.kis = kis
         self.api_url = f"https://api.telegram.org/bot{self.token}/sendMessage"
         self.state = self.load_state()
+        self.cache = BarCache(CACHE_FILE)
+        self.backfill_budget = BACKFILL_LIMIT
 
     def get_session_date(self):
         kst_now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
@@ -54,11 +70,10 @@ class USAmericaRSIBot:
 
         message = (
             f"🚨 <b>🇺🇸 [미국장 4H RSI {int(RSI_THRESHOLD)} 이하 감지]</b>\n\n"
-            f"• <b>기준 시간:</b> {check_time}\n"
             f"• <b>종목명:</b> <a href='{url_link}'>{name}</a> (<code>{ticker}</code>)\n"
             f"• <b>4시간봉 RSI:</b> <code>{rsi_val:.2f}</code>\n"
-            f"• <b>현재가:</b> ${close_p:,.2f}\n\n"
-            f"👉 <a href='{url_link}'>실시간 차트 확인하기</a>"
+            f"• <b>현재가:</b> ${close_p:,.2f}\n"
+            f"• <b>기준 시간:</b> {check_time}"
         )
         requests.post(self.api_url, data={"chat_id": self.chat_id, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True})
 
@@ -74,7 +89,6 @@ class USAmericaRSIBot:
             f"📈 <b>🇺🇸 [미국장 일일 마감 보고]</b>\n\n"
             f"• <b>기준 날짜:</b> {date_str} (오버나이트 세션)\n"
             f"• <b>스캔 결과:</b> {result_text}\n\n"
-            f"<i>(🟢 미국장 스캐너 정상 작동 중)</i>"
         )
         requests.post(self.api_url, data={"chat_id": self.chat_id, "text": message, "parse_mode": "HTML", "disable_web_page_preview": True})
 
@@ -82,97 +96,86 @@ class USAmericaRSIBot:
         base_stocks = {
             "SPY": "S&P 500 ETF", "QQQ": "나스닥 100 ETF", "DIA": "다우존스 ETF",
             "TQQQ": "나스닥 3배", "SQQQ": "나스닥 인버스 3배", "QLD": "나스닥 2배",
-            "UPRO": "S&P500 3배", "SOXX": "반도체 ETF", "SOXL": "반도체 3배", 
-            "SOXS": "반도체 인버스 3배", "USD": "반도체 2배", "TLT": "20년물 국채", 
-            "TMF": "국채 3배", "TSLL": "테슬라 1.5배", "CONL": "코인베이스 2배",
+            "UPRO": "S&P500 3배", "SOXX": "반도체 ETF", "SOXL": "반도체 3배",
+            "SOXS": "반도체 인버스 3배", "USD": "반도체 2배", "TLT": "20년물 국채",
+            "TMF": "국채 3배", "TSLL": "테슬라 2배", "CONL": "코인베이스 2배",
             "NVDL": "엔비디아 2배", "FNGU": "빅테크 3배", "TZA": "중소형주 인버스 3배",
             "BOIL": "천연가스 2배", "SCHD": "미국 배당성장 ETF",
             "AAPL": "애플", "NVDA": "엔비디아", "MSFT": "마이크로소프트",
             "GOOGL": "알파벳(구글)", "AMZN": "아마존", "META": "메타", "TSLA": "테슬라",
             "AVGO": "브로드컴", "TSM": "TSMC", "AMD": "AMD", "ASML": "ASML",
-            "QCOM": "퀄컴", "TXN": "텍사스 인스트루먼트", "MU": "마이크론",
-            "INTC": "인텔", "ARM": "ARM 홀딩스", "SMCI": "슈퍼마이크로",
-            "PLTR": "팔란티어", "CRWD": "크라우드스트라이크", "SNOW": "스노우플레이크",
-            "PANW": "팔로알토", "NOW": "서비스나우", "ADBE": "어도비",
-            "COIN": "코인베이스", "MSTR": "마이크로스트래티지", "HOOD": "로빈후드",
-            "UBER": "우버", "NFLX": "넷플릭스", "CRM": "세일즈포스", 
-            "DDOG": "데이터독", "NET": "클라우드플레어",
-            "JPM": "JP모건", "V": "비자", "BRK-B": "버크셔 해서웨이", 
-            "LLY": "일라이릴리", "UNH": "유나이티드헬스", "NVO": "노보 노디스크",
-            "JNJ": "존슨앤드존슨", "PEP": "펩시코", "MCD": "맥도날드", "ABBV": "애브비",
-            "WMT": "월마트", "COST": "코스트코", "PG": "프록터앤드갬블", "KO": "코카콜라",
-            "CAT": "캐터필러", "GE": "제너럴일렉트릭", "XOM": "엑슨모빌", 
-            "CVX": "쉐브론", "BA": "보잉"
+            "QCOM": "퀄컴", "MU": "마이크론", "INTC": "인텔", "ARM": "ARM 홀딩스",
+            "PLTR": "팔란티어", "PANW": "팔로알토", "ADBE": "어도비", "SMCI": "슈퍼마이크로",
+            "COIN": "코인베이스", "MSTR": "마이크로스트래티지", "HOOD": "로빈후드", "NFLX": "넷플릭스", 
+            "DDOG": "데이터독", "NET": "클라우드플레어", "JPM": "JP모건", "BRK-B": "버크셔 해서웨이",
+            "LLY": "일라이릴리", "JNJ": "존슨앤드존슨", "PEP": "펩시코", "MCD": "맥도날드", 
+            "WMT": "월마트", "COST": "코스트코", "KO": "코카콜라",
         }
 
         my_favorites = {
-            "GME": "게임스탑",
-            "AMC": "AMC 엔터테인먼트",
-            "RDDT": "레딧",
-            "DJT": "트럼프 미디어"
         }
-        
+
         base_stocks.update(my_favorites)
         return base_stocks
 
-    def calc_tradingview_rsi(self, close_series, period=14):
-        # 💡 국내 HTS(키움증권 등) 전용 EMA 방식 계산
-        delta = close_series.diff(1)
-        up = delta.clip(lower=0)
-        down = -1 * delta.clip(upper=0)
-        
-        roll_up = up.ewm(span=period, adjust=False).mean()
-        roll_down = down.ewm(span=period, adjust=False).mean()
-        
-        rs = roll_up / roll_down
-        rsi = 100.0 - (100.0 / (1.0 + rs))
-        
-        if pd.isna(rsi.iloc[-1]):
-            return None
-        return float(rsi.iloc[-1])
+    def fetch_us_4h_rsi(self, ticker, now, today_str, period=14):
+        """now: 미국 동부 현지 시각(naive). 완성된 4시간봉은 캐시, 진행 중 봉은 매번 새로 받는다."""
+        entry = self.cache.entry(ticker)
+        if entry.get("excd") == "":
+            return None, None  # KIS에서 찾지 못한 종목(캐시 만료 전까지 재조회하지 않음)
 
-    def fetch_us_4h_rsi(self, ticker, period=14):
-        yf_ticker = ticker.replace(".", "-") 
-        
-        df = yf.download(yf_ticker, period="730d", interval="1h", prepost=False, progress=False)
-        if df.empty or len(df) < 50:
+        hist = self.cache.closes(ticker)
+        if hist.empty:
+            if self.backfill_budget <= 0:
+                return None, None  # 이번 실행의 백필 한도 초과 → 다음 실행에서 처리
+            self.backfill_budget -= 1
+            start = datetime.datetime.combine((now - datetime.timedelta(days=BACKFILL_DAYS)).date(), US_SESSION_OPEN)
+        else:
+            start = (hist.index[-1] + pd.Timedelta(hours=4)).to_pydatetime()  # 첫 미수집 봉 시작
+
+        excd, symb = entry.get("excd"), entry.get("symb")
+        if not excd:
+            found = self.kis.resolve_us_symbol(ticker)
+            if not found:
+                self.cache.update(ticker, pd.Series(dtype=float), today_str, excd="", symb="")
+                print(f" [거래소 미확인] {ticker}: KIS에서 조회되지 않아 건너뜁니다.")
+                return None, None
+            excd, symb = found
+
+        last_price = None
+        forming = pd.Series(dtype=float)
+        if start <= now:
+            df = self.kis.get_us_minute_candles(excd, symb, start, now, NMIN)
+            if len(df):
+                # 정규장(09:30~16:00)만 사용. 프리/애프터마켓 봉은 제외한다.
+                df = df[(df.index.time >= US_SESSION_OPEN) & (df.index.time < US_SESSION_CLOSE)]
+            if len(df):
+                complete, forming = split_complete(resample_4h_close(df, BAR_ORIGIN), now, US_SESSION_CLOSE)
+                hist = complete if hist.empty else pd.concat([hist, complete])
+                hist = hist[~hist.index.duplicated(keep="last")].sort_index()
+                last_price = float(df["close"].iloc[-1])
+
+        self.cache.update(ticker, hist, today_str, excd=excd, symb=symb)
+
+        series = pd.concat([hist, forming]) if INCLUDE_FORMING_BAR and len(forming) else hist
+        if len(series) < MIN_4H_BARS:
+            print(f" [이력 부족] {ticker}: 4시간봉 {len(series)}개 (최소 {MIN_4H_BARS})")
             return None, None
-        
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
-            
-        if df.index.tz is not None:
-            df.index = df.index.tz_localize(None)
-            
-        df_4h = df.resample("4h", origin="2024-01-01 09:30:00", label="left", closed="left").agg({
-            "Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"
-        }).dropna()
-        
-        # 🔥 야후 1h 딜레이 무시하고 '실시간 1분봉 가격' 강제 주입
-        try:
-            live_data = yf.download(yf_ticker, period="1d", interval="1m", progress=False)
-            if not live_data.empty:
-                if isinstance(live_data.columns, pd.MultiIndex):
-                    live_data.columns = live_data.columns.get_level_values(0)
-                live_price = float(live_data["Close"].iloc[-1])
-                df_4h.iloc[-1, df_4h.columns.get_loc("Close")] = live_price
-        except Exception:
-            pass
 
-        rsi_val = self.calc_tradingview_rsi(df_4h["Close"], period)
+        rsi_val = wilder_rsi(series, period)
         if rsi_val is None:
             return None, None
-        return rsi_val, float(df_4h["Close"].iloc[-1])
+        return rsi_val, last_price if last_price is not None else float(series.iloc[-1])
 
     def run(self):
         kst_now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
         utc_hour = datetime.datetime.utcnow().hour
         date_str = self.state["date"]
         check_time_str = kst_now.strftime('%Y-%m-%d %H:%M KST')
-        
+
         session_time = kst_now - datetime.timedelta(hours=12)
         nyse_holidays = holidays.NYSE()
-        
+
         if session_time.weekday() >= 5 or session_time.date() in nyse_holidays:
             print(f" [휴장일] 미국 현지 주말 또는 공휴일이므로 스캐너를 실행하지 않습니다. ({check_time_str})")
             return
@@ -181,18 +184,28 @@ class USAmericaRSIBot:
 
         # 💡 겨울철 1시간 누락을 막기 위한 '21' 시간대 추가
         if utc_hour in [13, 14, 15, 16, 17, 18, 19, 20, 21]:
+            self.kis.issue_token()  # 실패하면 예외로 워크플로를 실패시켜 알 수 있게 한다
             us_stocks = self.get_us_target_stocks()
-            for ticker, name in us_stocks.items():
-                try:
-                    rsi, close_p = self.fetch_us_4h_rsi(ticker)
-                    if rsi and rsi <= RSI_THRESHOLD and ticker not in self.state.get("alerted", []):
-                        self.send_telegram_alert(name, ticker, rsi, close_p, check_time_str)
-                        self.state["alerted"].append(ticker)
-                        self.save_state()
-                    time.sleep(0.1)
-                except Exception:
-                    continue
-            
+            now = datetime.datetime.now(NY).replace(tzinfo=None)
+            failed = skipped = 0
+            try:
+                for ticker, name in us_stocks.items():
+                    try:
+                        rsi, close_p = self.fetch_us_4h_rsi(ticker, now, date_str)
+                        if rsi is None:
+                            skipped += 1
+                        elif rsi <= RSI_THRESHOLD and ticker not in self.state.get("alerted", []):
+                            self.send_telegram_alert(name, ticker, rsi, close_p, check_time_str)
+                            self.state["alerted"].append(ticker)
+                            self.save_state()
+                    except Exception as e:
+                        failed += 1
+                        print(f" [조회 실패] {name}({ticker}): {e}")
+            finally:
+                self.cache.prune(pd.Timestamp(date_str))
+                self.cache.save()  # 중간에 끊겨도 백필 진행분을 보존
+            print(f" [스캔 완료] 대상 {len(us_stocks)}종목, 데이터 부족/백필 대기 {skipped}종목, 실패 {failed}종목")
+
         current_month = datetime.datetime.utcnow().month
         is_dst = 3 <= current_month <= 11
         summary_hours = [20, 21, 22] if is_dst else [21, 22, 23]
@@ -200,5 +213,6 @@ class USAmericaRSIBot:
             self.send_daily_summary(date_str, self.state.get("signal_count", 0))
 
 if __name__ == "__main__":
-    bot = USAmericaRSIBot(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
+    kis = KISClient(KIS_APP_KEY, KIS_APP_SECRET)
+    bot = USAmericaRSIBot(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, kis)
     bot.run()

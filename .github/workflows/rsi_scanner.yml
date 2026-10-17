@@ -1,10 +1,13 @@
 name: 🌐 Telegram KR & US Market RSI Scanner
 
 on:
-  schedule:
-# 💡 깃허브 서버 정각 병목을 피해 매시간 12분, 42분에 실행 (30분 주기)
-    - cron: '12,42 * * * *'
-  workflow_dispatch: # 체크박스 없이 일반 수동 실행 지원
+  # 💡 실행은 외부 스케줄러(cron-job.org)가 30분마다 GitHub API로 이 workflow_dispatch를 호출해서 한다.
+  #    (자체 schedule 없음. 수동 실행도 같은 트리거로 가능)
+  workflow_dispatch:
+
+concurrency:
+  group: rsi-scanner  # 백필로 오래 걸려도 실행이 겹쳐 커밋/푸시가 충돌하지 않도록 순차 실행
+  cancel-in-progress: false
 
 jobs:
   run-dual-scanner:
@@ -23,18 +26,36 @@ jobs:
       - name: 필수 라이브러리 설치
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy requests beautifulsoup4 yfinance holidays
+          pip install pandas numpy requests beautifulsoup4 holidays
+
+      - name: 🔑 토큰 만료 임박 알림 (만료 7일 전부터 하루 1회)
+        continue-on-error: true  # 알림 문제로 스캐너가 막히지 않게 한다
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python check_token_expiry.py
+
+      - name: KIS 접근토큰 캐시 복원 (재발급 제한·알림톡 방지)
+        uses: actions/cache@v4
+        with:
+          path: ~/.kis_token.json
+          key: kis-token-${{ github.run_id }}
+          restore-keys: kis-token-
 
       - name: 🇰🇷 한국장 4시간봉 RSI 스캐너 실행
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
         run: python rsi_kr_bot.py
 
       - name: 🇺🇸 미국장 4시간봉 RSI 스캐너 실행
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
         run: python rsi_us_bot.py
 
       - name: 한/미 실행 로그 및 상태 파일 통합 커밋

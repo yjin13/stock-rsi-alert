@@ -1,0 +1,12 @@
+[
+    {
+        "name": "KIS App Key/Secret",
+        "expires": "2027-10-17",
+        "renew": "KIS Developers에서 키 재발급 → GitHub Settings > Secrets and variables > Actions 의 KIS_APP_KEY, KIS_APP_SECRET 교체"
+    },
+    {
+        "name": "GitHub 토큰 (cron-job.org)",
+        "expires": "2027-10-17",
+        "renew": "GitHub에서 fine-grained 토큰 재발급(이 저장소, Actions: Read and write) → cron-job.org 모든 작업의 Authorization: Bearer 헤더 교체"
+    }
+]
