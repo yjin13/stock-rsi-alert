@@ -33,7 +33,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python check_token_expiry.py
+        run: python -m bots.check_token_expiry
 
       - name: KIS 접근토큰 캐시 복원 (재발급 제한·알림톡 방지)
         uses: actions/cache@v4
@@ -48,7 +48,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
-        run: python rsi_kr_bot.py
+        run: python -m bots.rsi_kr_bot
 
       - name: 🇺🇸 미국장 4시간봉 RSI 스캐너 실행
         env:
@@ -56,7 +56,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
-        run: python rsi_us_bot.py
+        run: python -m bots.rsi_us_bot
 
       - name: 한/미 실행 로그 및 상태 파일 통합 커밋
         run: |
@@ -64,8 +64,8 @@ jobs:
           git config --global user.email "actions@github.com"
           
           KST_TIME=$(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S KST')
-          echo "[$KST_TIME] 🌐 한국/미국 RSI 스캔 완료" >> scanner_log.txt
-          tail -n 100 scanner_log.txt > temp_log.txt && mv temp_log.txt scanner_log.txt
+          echo "[$KST_TIME] 🌐 한국/미국 RSI 스캔 완료" >> data/scanner_log.txt
+          tail -n 100 data/scanner_log.txt > data/temp_log.txt && mv data/temp_log.txt data/scanner_log.txt
           
           git add -A
           git commit -m "log: update KR & US scan status ($KST_TIME)" || exit 0

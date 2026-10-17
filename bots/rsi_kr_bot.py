@@ -6,15 +6,15 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import holidays
-from kis_client import KISClient
-from rsi_common import BarCache, wilder_rsi, resample_4h_close, split_complete
+from lib.kis_client import KISClient
+from lib.rsi_common import DATA_DIR, BarCache, wilder_rsi, resample_4h_close, split_complete
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "본인의_CHAT_ID_입력")
 KIS_APP_KEY = os.environ.get("KIS_APP_KEY", "")
 KIS_APP_SECRET = os.environ.get("KIS_APP_SECRET", "")
-STATE_FILE = "kr_state.json"
-CACHE_FILE = "kr_4h_cache.json"  # 종목별 '완성된' 4시간봉 종가 캐시(증분 갱신용)
+STATE_FILE = os.path.join(DATA_DIR, "kr_state.json")
+CACHE_FILE = os.path.join(DATA_DIR, "kr_4h_cache.json")  # 종목별 '완성된' 4시간봉 종가 캐시(증분 갱신용)
 RSI_THRESHOLD = 30.0  # 🎯 원하는 RSI 수치
 KR_SESSION_CLOSE = datetime.time(15, 30)
 BAR_ORIGIN = "2024-01-01 09:00:00"  # 4시간봉 경계: 09:00~13:00, 13:00~15:30

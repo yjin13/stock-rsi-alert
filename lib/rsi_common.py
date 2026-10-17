@@ -1,6 +1,11 @@
+import os
 import json
 import numpy as np
 import pandas as pd
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.environ.get("RSI_DATA_DIR", os.path.join(ROOT_DIR, "data"))  # 상태·캐시·로그(워크플로가 커밋)
+os.makedirs(DATA_DIR, exist_ok=True)
 
 
 def wilder_rsi(close_series, period=14):

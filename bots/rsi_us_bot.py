@@ -5,15 +5,15 @@ import requests
 import pandas as pd
 import holidays
 from zoneinfo import ZoneInfo
-from kis_client import KISClient
-from rsi_common import BarCache, wilder_rsi, resample_4h_close, split_complete
+from lib.kis_client import KISClient
+from lib.rsi_common import DATA_DIR, BarCache, wilder_rsi, resample_4h_close, split_complete
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "본인의_CHAT_ID_입력")
 KIS_APP_KEY = os.environ.get("KIS_APP_KEY", "")
 KIS_APP_SECRET = os.environ.get("KIS_APP_SECRET", "")
-STATE_FILE = "us_state.json"
-CACHE_FILE = "us_4h_cache.json"  # 종목별 '완성된' 4시간봉 종가 + KIS 거래소 코드 캐시
+STATE_FILE = os.path.join(DATA_DIR, "us_state.json")
+CACHE_FILE = os.path.join(DATA_DIR, "us_4h_cache.json")  # 종목별 '완성된' 4시간봉 종가 + KIS 거래소 코드 캐시
 RSI_THRESHOLD = 30.0  # 🎯 원하는 RSI 수치
 US_SESSION_OPEN = datetime.time(9, 30)
 US_SESSION_CLOSE = datetime.time(16, 0)
