@@ -26,7 +26,7 @@ jobs:
       - name: 필수 라이브러리 설치
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy requests beautifulsoup4 holidays
+          pip install pandas numpy requests holidays yfinance
 
       - name: 🔑 토큰 만료 임박 알림 (만료 7일 전부터 하루 1회)
         continue-on-error: true  # 알림 문제로 스캐너가 막히지 않게 한다

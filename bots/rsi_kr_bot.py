@@ -3,7 +3,6 @@ import re
 import json
 import datetime
 import requests
-from bs4 import BeautifulSoup
 import pandas as pd
 import holidays
 from lib.kis_client import KISClient
@@ -64,24 +63,23 @@ class KoreaRSIBot:
         return True
 
     def get_kr_top100(self):
-        urls = [
-            "https://finance.naver.com/sise/sise_quant.naver",
-            "https://finance.naver.com/sise/sise_quant.naver?sosok=1",
-            "https://finance.naver.com/sise/sise_quant_high.naver",
-            "https://finance.naver.com/sise/sise_quant_high.naver?sosok=1"
-        ]
+        # 네이버 금융 구 페이지(sise_quant.naver)가 새 사이트로 리다이렉트되어 종목이 0개로 잡히던 문제 →
+        # 모바일 JSON API(거래량 상위, 코스피·코스닥 각 100개)로 대체
         headers = {"User-Agent": "Mozilla/5.0"}
         stocks = {}
-        for u in urls:
-            res = requests.get(u, headers=headers)
-            soup = BeautifulSoup(res.text, "html.parser")
-            for a in soup.find_all("a", href=True):
-                if "/item/main.naver?code=" in a["href"]:
-                    m = re.search(r"code=([0-9A-Za-z]{6})", a["href"])
-                    if m and a.text.strip():
-                        stock_name = a.text.strip()
-                        if self.is_valid_kr_stock(stock_name):
-                            stocks[m.group(1)] = stock_name
+        for market in ("KOSPI", "KOSDAQ"):
+            try:
+                res = requests.get(
+                    f"https://m.stock.naver.com/api/stocks/quantTop/{market}",
+                    params={"page": 1, "pageSize": 100}, headers=headers, timeout=10,
+                )
+                res.raise_for_status()
+                for item in res.json().get("stocks", []):
+                    code, name = item.get("itemCode"), (item.get("stockName") or "").strip()
+                    if re.fullmatch(r"[0-9A-Za-z]{6}", code or "") and name and self.is_valid_kr_stock(name):
+                        stocks[code] = name
+            except Exception as e:
+                print(f" [종목 목록 실패] {market}: {e}")
         return stocks
 
     def send_telegram_alert(self, name, code, rsi_val, close_p, check_time):
@@ -163,6 +161,8 @@ class KoreaRSIBot:
         if utc_hour in [0, 1, 2, 3, 4, 5, 6, 7]:
             self.kis.issue_token()  # 실패하면 예외로 워크플로를 실패시켜 알 수 있게 한다
             kr_stocks = self.get_kr_top100()
+            if not kr_stocks:
+                raise RuntimeError("한국장 종목 목록이 비어 있습니다(네이버 응답 형식 변경 의심)")  # 조용히 넘어가지 않고 워크플로를 실패시킨다
             now = kst_now.replace(tzinfo=None)
             failed = skipped = 0
             try:

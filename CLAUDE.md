@@ -9,11 +9,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 디렉터리 구성 (기능별)
 
 - `bots/` — 워크플로가 직접 실행하는 텔레그램 알림 스크립트. 저장소 루트에서 `python -m bots.<이름>`으로 실행합니다.
-  - `rsi_kr_bot.py` — 한국장. 종목 목록은 네이버 금융 거래량 상위 페이지에서 긁고, 시세는 KIS 국내 1분봉.
+  - `rsi_kr_bot.py` — 한국장. 종목 목록은 네이버 모바일 JSON API(`quantTop`, 코스피·코스닥 각 100개)에서 받고(구 `sise_quant.naver`는 리다이렉트되어 0개가 됨, 목록이 비면 워크플로 실패), 시세는 KIS 국내 1분봉.
   - `rsi_us_bot.py` — 미국장. 하드코딩된 종목 목록, 시세는 KIS 해외 분봉(현지 시각 기준, 정규장 09:30~16:00만 사용).
   - `check_token_expiry.py` — `data/token_expiry.json`에 적힌 KIS 키·GitHub 토큰의 만료일을 보고, **만료 7일 전부터(만료 후 갱신 전까지) 하루 1번** 텔레그램으로 알립니다. 워크플로 첫 스텝(`continue-on-error`)으로 돌아 스캐너가 실패해도 알림은 나갑니다(KST 09시 이후 첫 실행에서 발송, 전송 실패 시 다음 실행에서 재시도).
 - `lib/` — 봇들이 공유하는 라이브러리.
   - `kis_client.py` — KIS 토큰 발급(파일 캐시 재사용), 국내 `주식일별분봉조회`(FHKST03010230), 해외 `해외주식분봉조회`(HHDFS76950200) 페이지네이션, 해외 티커→거래소 코드 탐색.
+  - `history_seed.py` — KIS 해외 분봉이 약 1개월치(4시간봉 약 44개)만 제공돼 부족한 과거 이력을 yfinance 60분봉으로 한 번 채웁니다(캐시 `seeded` 플래그, 실패 시 다음 실행에서 재시도, 연속 3회 실패하면 그 실행에서는 중단). 겹치는 구간은 KIS 값이 우선입니다.
   - `rsi_common.py` — Wilder RSI, 4시간봉 묶기, 완성/진행 중 봉 분리, `BarCache`(JSON 캐시), 데이터 경로(`DATA_DIR`).
 - `data/` — 상태·캐시·로그·설정 JSON. **`token_expiry.json`만 사람이 편집**하고 나머지는 워크플로가 커밋합니다(로컬에서 봇을 실행하면 이 파일들이 바뀝니다).
   - `kr_state.json`, `us_state.json` — 당일 알림 중복 방지·일일 요약 발송 여부.
@@ -27,7 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 의존성 설치 (CI와 동일):
 ```
-pip install pandas numpy requests beautifulsoup4 holidays
+pip install pandas numpy requests holidays yfinance
 ```
 
 실행 (저장소 루트에서. 환경변수가 없으면 전송/인증이 실패합니다):

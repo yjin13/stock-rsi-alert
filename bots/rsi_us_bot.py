@@ -6,6 +6,7 @@ import pandas as pd
 import holidays
 from zoneinfo import ZoneInfo
 from lib.kis_client import KISClient
+from lib.history_seed import fetch_us_4h_seed
 from lib.rsi_common import DATA_DIR, BarCache, wilder_rsi, resample_4h_close, split_complete
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
@@ -23,6 +24,7 @@ BACKFILL_DAYS = 100  # 신규 종목 백필 구간(달력일)
 BACKFILL_LIMIT = int(os.environ.get("US_BACKFILL_LIMIT", "8"))  # 실행당 신규 종목 백필 한도(해외는 호출이 느림)
 NMIN = int(os.environ.get("KIS_US_NMIN", "1"))  # 요청 분봉 단위. 1이 가장 안전하고, 키우면 호출 수가 줄어든다
 INCLUDE_FORMING_BAR = True  # 진행 중인 4시간봉도 RSI에 반영(HTS 화면·실시간 알림 기준)
+SEED_MAX_FAILS = 3  # 시드(yfinance) 연속 실패가 이 횟수에 닿으면 이번 실행에서는 더 시도하지 않는다
 NY = ZoneInfo("America/New_York")
 
 class USAmericaRSIBot:
@@ -34,6 +36,7 @@ class USAmericaRSIBot:
         self.state = self.load_state()
         self.cache = BarCache(CACHE_FILE)
         self.backfill_budget = BACKFILL_LIMIT
+        self.seed_fails = 0
 
     def get_session_date(self):
         kst_now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
@@ -155,7 +158,20 @@ class USAmericaRSIBot:
                 hist = hist[~hist.index.duplicated(keep="last")].sort_index()
                 last_price = float(df["close"].iloc[-1])
 
-        self.cache.update(ticker, hist, today_str, excd=excd, symb=symb)
+        seeded = bool(entry.get("seeded"))
+        if not seeded and len(hist) and len(hist) < MIN_4H_BARS and self.seed_fails < SEED_MAX_FAILS:
+            try:
+                seed = fetch_us_4h_seed(ticker, now, US_SESSION_CLOSE)
+                older = seed[seed.index < hist.index[0]]  # 겹치는 구간은 KIS 값을 우선한다
+                hist = pd.concat([older, hist]).sort_index()
+                seeded = True
+                self.seed_fails = 0
+                print(f" [이력 시드] {ticker}: yfinance 과거 봉 {len(older)}개 추가 → {len(hist)}개")
+            except Exception as e:
+                self.seed_fails += 1
+                print(f" [시드 실패] {ticker}: {e}")
+
+        self.cache.update(ticker, hist, today_str, excd=excd, symb=symb, seeded=seeded)
 
         series = pd.concat([hist, forming]) if INCLUDE_FORMING_BAR and len(forming) else hist
         if len(series) < MIN_4H_BARS:
