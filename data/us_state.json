@@ -1,6 +1,10 @@
 {
-    "date": "2026-10-19",
-    "signal_count": 0,
-    "summary_sent": true,
-    "alerted": []
+    "date": "2026-10-20",
+    "signal_count": 3,
+    "summary_sent": false,
+    "alerted": [
+        "INTC",
+        "ARM",
+        "SMCI"
+    ]
 }
