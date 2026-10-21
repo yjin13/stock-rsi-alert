@@ -1,9 +1,10 @@
 {
     "date": "2026-10-21",
-    "signal_count": 2,
+    "signal_count": 3,
     "summary_sent": false,
     "alerted": [
         "219900",
-        "477490"
+        "477490",
+        "088350"
     ]
 }
