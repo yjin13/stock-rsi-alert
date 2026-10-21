@@ -19,6 +19,8 @@ KR_SESSION_CLOSE = datetime.time(15, 30)
 BAR_ORIGIN = "2024-01-01 09:00:00"  # 4시간봉 경계: 09:00~13:00, 13:00~15:30
 MIN_4H_BARS = 100  # RSI 수렴을 위한 최소 4시간봉 개수
 BACKFILL_DAYS = 100  # 신규 종목 백필 구간(달력일, 약 140개 4시간봉)
+KR_LIST_KINDS = ("quantTop", "marketValue")  # 네이버 목록: 거래량 상위, 시가총액 상위
+KR_LIST_SIZE = 100  # 목록·시장당 종목 수
 BACKFILL_LIMIT = int(os.environ.get("KR_BACKFILL_LIMIT", "20"))  # 실행당 신규 종목 백필 한도
 INCLUDE_FORMING_BAR = True  # 진행 중인 4시간봉도 RSI에 반영(HTS 화면·실시간 알림 기준)
 
@@ -57,29 +59,32 @@ class KoreaRSIBot:
             pass
 
     def is_valid_kr_stock(self, name):
-        for kw in ["인버스", "곱버스", "PUT", "put", "선물인버스"]:
-            if kw in name:
+        # 인버스·곱버스·레버리지 상품은 제외(대소문자 구분 없이 이름으로 판별)
+        upper = name.upper()
+        for kw in ["인버스", "곱버스", "레버리지", "2X", "3X", "LEVERAGE", "INVERSE", "ULTRA", "PUT"]:
+            if kw in upper:
                 return False
         return True
 
     def get_kr_top100(self):
         # 네이버 금융 구 페이지(sise_quant.naver)가 새 사이트로 리다이렉트되어 종목이 0개로 잡히던 문제 →
-        # 모바일 JSON API(거래량 상위, 코스피·코스닥 각 100개)로 대체
+        # 모바일 JSON API로 대체. 거래량 상위 + 시가총액 상위(코스피·코스닥 각 100개)를 합친다.
         headers = {"User-Agent": "Mozilla/5.0"}
         stocks = {}
-        for market in ("KOSPI", "KOSDAQ"):
-            try:
-                res = requests.get(
-                    f"https://m.stock.naver.com/api/stocks/quantTop/{market}",
-                    params={"page": 1, "pageSize": 100}, headers=headers, timeout=10,
-                )
-                res.raise_for_status()
-                for item in res.json().get("stocks", []):
-                    code, name = item.get("itemCode"), (item.get("stockName") or "").strip()
-                    if re.fullmatch(r"[0-9A-Za-z]{6}", code or "") and name and self.is_valid_kr_stock(name):
-                        stocks[code] = name
-            except Exception as e:
-                print(f" [종목 목록 실패] {market}: {e}")
+        for kind in KR_LIST_KINDS:
+            for market in ("KOSPI", "KOSDAQ"):
+                try:
+                    res = requests.get(
+                        f"https://m.stock.naver.com/api/stocks/{kind}/{market}",
+                        params={"page": 1, "pageSize": KR_LIST_SIZE}, headers=headers, timeout=10,
+                    )
+                    res.raise_for_status()
+                    for item in res.json().get("stocks", []):
+                        code, name = item.get("itemCode"), (item.get("stockName") or "").strip()
+                        if re.fullmatch(r"[0-9A-Za-z]{6}", code or "") and name and self.is_valid_kr_stock(name):
+                            stocks[code] = name
+                except Exception as e:
+                    print(f" [종목 목록 실패] {kind}/{market}: {e}")
         return stocks
 
     def send_telegram_alert(self, name, code, rsi_val, close_p, check_time):

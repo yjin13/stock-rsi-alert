@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트 개요
 
-한국장(KOSPI/KOSDAQ 거래량 상위 종목)과 미국장(지정 종목·ETF)의 **4시간봉 RSI가 임계값(30) 이하로 떨어지면 텔레그램으로 알림**을 보내는 스캐너입니다. 별도 서버 없이 GitHub Actions 크론으로 30분마다 실행됩니다. 시세는 두 시장 모두 **한국투자증권(KIS) Open API**의 분봉으로 받습니다.
+한국장(KOSPI/KOSDAQ 거래량·시가총액 상위 종목)과 미국장(지정 종목·ETF)의 **4시간봉 RSI가 임계값(30) 이하로 떨어지면 텔레그램으로 알림**을 보내는 스캐너입니다. 별도 서버 없이 GitHub Actions 크론으로 30분마다 실행됩니다. 시세는 두 시장 모두 **한국투자증권(KIS) Open API**의 분봉으로 받습니다.
 
 ### 디렉터리 구성 (기능별)
 
 - `bots/` — 워크플로가 직접 실행하는 텔레그램 알림 스크립트. 저장소 루트에서 `python -m bots.<이름>`으로 실행합니다.
-  - `rsi_kr_bot.py` — 한국장. 종목 목록은 네이버 모바일 JSON API(`quantTop`, 코스피·코스닥 각 100개)에서 받고(구 `sise_quant.naver`는 리다이렉트되어 0개가 됨, 목록이 비면 워크플로 실패), 시세는 KIS 국내 1분봉.
+  - `rsi_kr_bot.py` — 한국장. 종목 목록은 네이버 모바일 JSON API(거래량 상위 `quantTop` + 시가총액 상위 `marketValue`, 코스피·코스닥 각 100개씩, 인버스·레버리지 제외)에서 받고(구 `sise_quant.naver`는 리다이렉트되어 0개가 됨, 목록이 비면 워크플로 실패), 시세는 KIS 국내 1분봉.
   - `rsi_us_bot.py` — 미국장. 하드코딩된 종목 목록, 시세는 KIS 해외 분봉(현지 시각 기준, 정규장 09:30~16:00만 사용).
   - `check_token_expiry.py` — `data/token_expiry.json`에 적힌 KIS 키·GitHub 토큰의 만료일을 보고, **만료 7일 전부터(만료 후 갱신 전까지) 하루 1번** 텔레그램으로 알립니다. 워크플로 첫 스텝(`continue-on-error`)으로 돌아 스캐너가 실패해도 알림은 나갑니다(KST 09시 이후 첫 실행에서 발송, 전송 실패 시 다음 실행에서 재시도).
 - `lib/` — 봇들이 공유하는 라이브러리.
