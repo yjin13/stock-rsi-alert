@@ -1,11 +1,12 @@
 {
     "date": "2026-10-21",
-    "signal_count": 4,
+    "signal_count": 5,
     "summary_sent": false,
     "alerted": [
         "INTC",
         "ARM",
         "PANW",
-        "SMCI"
+        "SMCI",
+        "NFLX"
     ]
 }
