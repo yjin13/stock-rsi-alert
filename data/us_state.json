@@ -1,6 +1,6 @@
 {
     "date": "2026-10-22",
-    "signal_count": 8,
+    "signal_count": 9,
     "summary_sent": false,
     "alerted": [
         "NFLX",
@@ -10,6 +10,7 @@
         "SOXL",
         "META",
         "SOXX",
-        "USD"
+        "USD",
+        "FNGU"
     ]
 }
