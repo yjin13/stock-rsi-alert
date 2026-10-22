@@ -1,7 +1,7 @@
 {
     "date": "2026-10-22",
     "signal_count": 9,
-    "summary_sent": false,
+    "summary_sent": true,
     "alerted": [
         "NFLX",
         "INTC",
