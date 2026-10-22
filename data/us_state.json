@@ -1,11 +1,13 @@
 {
     "date": "2026-10-22",
-    "signal_count": 4,
+    "signal_count": 6,
     "summary_sent": false,
     "alerted": [
         "NFLX",
         "INTC",
         "ARM",
-        "GOOGL"
+        "GOOGL",
+        "SOXL",
+        "META"
     ]
 }
