@@ -1,8 +1,10 @@
 {
     "date": "2026-10-22",
-    "signal_count": 1,
+    "signal_count": 3,
     "summary_sent": false,
     "alerted": [
-        "NFLX"
+        "NFLX",
+        "INTC",
+        "ARM"
     ]
 }
