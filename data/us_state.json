@@ -1,6 +1,6 @@
 {
     "date": "2026-10-22",
-    "signal_count": 6,
+    "signal_count": 7,
     "summary_sent": false,
     "alerted": [
         "NFLX",
@@ -8,6 +8,7 @@
         "ARM",
         "GOOGL",
         "SOXL",
-        "META"
+        "META",
+        "SOXX"
     ]
 }
