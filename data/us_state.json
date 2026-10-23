@@ -1,16 +1,15 @@
 {
-    "date": "2026-10-22",
-    "signal_count": 9,
-    "summary_sent": true,
+    "date": "2026-10-23",
+    "signal_count": 8,
+    "summary_sent": false,
     "alerted": [
-        "NFLX",
-        "INTC",
-        "ARM",
-        "GOOGL",
-        "SOXL",
-        "META",
         "SOXX",
+        "SOXL",
         "USD",
-        "FNGU"
+        "FNGU",
+        "GOOGL",
+        "META",
+        "INTC",
+        "ARM"
     ]
 }
