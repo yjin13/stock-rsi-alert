@@ -6,7 +6,7 @@ import requests
 import pandas as pd
 import holidays
 from lib.kis_client import KISClient
-from lib.rsi_common import DATA_DIR, BarCache, wilder_rsi, resample_4h_close, split_complete
+from lib.rsi_common import DATA_DIR, BarCache, wilder_rsi, resample_4h_close, split_complete, in_alert_window
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "본인의_CHAT_ID_입력")
@@ -22,7 +22,19 @@ BACKFILL_DAYS = 100  # 신규 종목 백필 구간(달력일, 약 140개 4시간
 KR_LIST_KINDS = ("quantTop", "marketValue")  # 네이버 목록: 거래량 상위, 시가총액 상위
 KR_LIST_SIZE = 100  # 목록·시장당 종목 수
 BACKFILL_LIMIT = int(os.environ.get("KR_BACKFILL_LIMIT", "20"))  # 실행당 신규 종목 백필 한도
-INCLUDE_FORMING_BAR = True  # 진행 중인 4시간봉도 RSI에 반영(HTS 화면·실시간 알림 기준)
+INCLUDE_FORMING_BAR = False  # 봉이 마감될 때만 알리므로 완성된 4시간봉으로만 RSI 계산
+KR_BAR_CLOSES = (datetime.time(13, 0), datetime.time(15, 30))  # 4시간봉 마감 시각(알림 전송 시점)
+
+ETF_BRANDS = ("KODEX", "TIGER", "SOL", "ACE", "RISE", "KBSTAR", "HANARO", "PLUS", "ARIRANG", "KOSEF", "TIMEFOLIO", "WON", "HK")  # ETF 브랜드 접두어
+
+
+def etf_base(name):
+    """ETF면 브랜드를 뗀 이름(공백 제거, 대문자)을, 아니면 None을 반환한다."""
+    parts = name.split(None, 1)
+    if len(parts) == 2 and parts[0].upper() in ETF_BRANDS:
+        return parts[1].replace(" ", "").upper()
+    return None
+
 
 class KoreaRSIBot:
     def __init__(self, token, chat_id, kis):
@@ -71,6 +83,7 @@ class KoreaRSIBot:
         # 모바일 JSON API로 대체. 거래량 상위 + 시가총액 상위(코스피·코스닥 각 100개)를 합친다.
         headers = {"User-Agent": "Mozilla/5.0"}
         stocks = {}
+        etf_seen = set()
         for kind in KR_LIST_KINDS:
             for market in ("KOSPI", "KOSDAQ"):
                 try:
@@ -81,8 +94,15 @@ class KoreaRSIBot:
                     res.raise_for_status()
                     for item in res.json().get("stocks", []):
                         code, name = item.get("itemCode"), (item.get("stockName") or "").strip()
-                        if re.fullmatch(r"[0-9A-Za-z]{6}", code or "") and name and self.is_valid_kr_stock(name):
-                            stocks[code] = name
+                        if not (re.fullmatch(r"[0-9A-Za-z]{6}", code or "") and name and self.is_valid_kr_stock(name)):
+                            continue
+                        base = etf_base(name)
+                        if base is not None:
+                            # ETF는 거래량 상위 목록에서만 받고, 같은 기초지수는 먼저 나온(거래량 많은) 하나만 둔다
+                            if kind != "quantTop" or base in etf_seen:
+                                continue
+                            etf_seen.add(base)
+                        stocks[code] = name
                 except Exception as e:
                     print(f" [종목 목록 실패] {kind}/{market}: {e}")
         return stocks
@@ -162,33 +182,40 @@ class KoreaRSIBot:
             return
 
         print(f" [🇰🇷 한국장 스캐너 실행] KST 시간: {check_time_str}")
+        now = kst_now.replace(tzinfo=None)
 
         if utc_hour in [0, 1, 2, 3, 4, 5, 6, 7]:
             self.kis.issue_token()  # 실패하면 예외로 워크플로를 실패시켜 알 수 있게 한다
             kr_stocks = self.get_kr_top100()
             if not kr_stocks:
                 raise RuntimeError("한국장 종목 목록이 비어 있습니다(네이버 응답 형식 변경 의심)")  # 조용히 넘어가지 않고 워크플로를 실패시킨다
-            now = kst_now.replace(tzinfo=None)
             failed = skipped = 0
+            pending = []  # 이번 실행에서 새로 감지된 종목(스캔이 끝난 뒤 한꺼번에 전송)
             try:
                 for code, name in kr_stocks.items():
                     try:
                         rsi, close_p = self.fetch_kr_4h_rsi(code, now)
                         if rsi is None:
                             skipped += 1
-                        elif rsi <= RSI_THRESHOLD and code not in self.state.get("alerted", []):
-                            self.send_telegram_alert(name, code, rsi, close_p, check_time_str)
-                            self.state["alerted"].append(code)
-                            self.save_state()
+                        elif rsi <= RSI_THRESHOLD:
+                            if code not in self.state["alerted"]:
+                                pending.append((name, code, rsi, close_p))
                     except Exception as e:
                         failed += 1
                         print(f" [조회 실패] {name}({code}): {e}")
             finally:
                 self.cache.prune(pd.Timestamp(now))
                 self.cache.save()  # 중간에 끊겨도 백필 진행분을 보존
+            if pending and in_alert_window(now, KR_BAR_CLOSES):
+                for name, code, rsi, close_p in pending:
+                    self.send_telegram_alert(name, code, rsi, close_p, check_time_str)
+                    self.state["alerted"].append(code)
+                    self.save_state()
+            elif pending:
+                print(f" [알림 보류] 4시간봉 마감 직후 실행이 아니라 {len(pending)}종목 알림을 보내지 않았습니다(다음 봉 마감 때 재판단).")
             print(f" [스캔 완료] 대상 {len(kr_stocks)}종목, 데이터 부족/백필 대기 {skipped}종목, 실패 {failed}종목")
 
-        if utc_hour in [7, 8, 9] and not self.state["summary_sent"]:
+        if (utc_hour in [7, 8, 9] or now.time() >= KR_SESSION_CLOSE) and not self.state["summary_sent"]:  # 마감 봉 실행(15:30 이후)에서 알림 뒤에 요약
             self.send_daily_summary(date_str, self.state.get("signal_count", 0))
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import os
+import datetime
 import json
 import numpy as np
 import pandas as pd
@@ -6,6 +7,18 @@ import pandas as pd
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.environ.get("RSI_DATA_DIR", os.path.join(ROOT_DIR, "data"))  # 상태·캐시·로그(워크플로가 커밋)
 os.makedirs(DATA_DIR, exist_ok=True)
+
+
+ALERT_WINDOW_MIN = 25  # 4시간봉 마감 시각부터 이 분 안에 시작한 실행에서만 알림 전송(데이터 반영 대기·호출 지연 허용)
+
+
+def in_alert_window(now, close_times):
+    """now(현지 시각, naive)가 4시간봉 마감 시각(close_times) 직후 ALERT_WINDOW_MIN분 이내인지."""
+    for close in close_times:
+        start = datetime.datetime.combine(now.date(), close)
+        if start <= now < start + datetime.timedelta(minutes=ALERT_WINDOW_MIN):
+            return True
+    return False
 
 
 def wilder_rsi(close_series, period=14):

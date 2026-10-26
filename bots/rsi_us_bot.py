@@ -7,7 +7,7 @@ import holidays
 from zoneinfo import ZoneInfo
 from lib.kis_client import KISClient
 from lib.history_seed import fetch_us_4h_seed
-from lib.rsi_common import DATA_DIR, BarCache, wilder_rsi, resample_4h_close, split_complete
+from lib.rsi_common import DATA_DIR, BarCache, wilder_rsi, resample_4h_close, split_complete, in_alert_window
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "본인의_BOT_TOKEN_입력")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "본인의_CHAT_ID_입력")
@@ -23,7 +23,8 @@ MIN_4H_BARS = int(os.environ.get("US_MIN_4H_BARS", "100"))  # RSI 수렴을 위�
 BACKFILL_DAYS = 100  # 신규 종목 백필 구간(달력일)
 BACKFILL_LIMIT = int(os.environ.get("US_BACKFILL_LIMIT", "8"))  # 실행당 신규 종목 백필 한도(해외는 호출이 느림)
 NMIN = int(os.environ.get("KIS_US_NMIN", "1"))  # 요청 분봉 단위. 1이 가장 안전하고, 키우면 호출 수가 줄어든다
-INCLUDE_FORMING_BAR = True  # 진행 중인 4시간봉도 RSI에 반영(HTS 화면·실시간 알림 기준)
+INCLUDE_FORMING_BAR = False  # 봉이 마감될 때만 알리므로 완성된 4시간봉으로만 RSI 계산
+US_BAR_CLOSES = (datetime.time(13, 30), datetime.time(16, 0))  # 4시간봉 마감 시각(현지, 알림 전송 시점)
 SEED_MAX_FAILS = 3  # 시드(yfinance) 연속 실패가 이 횟수에 닿으면 이번 실행에서는 더 시도하지 않는다
 NY = ZoneInfo("America/New_York")
 
@@ -204,22 +205,29 @@ class USAmericaRSIBot:
             us_stocks = self.get_us_target_stocks()
             now = datetime.datetime.now(NY).replace(tzinfo=None)
             failed = skipped = 0
+            pending = []  # 이번 실행에서 새로 감지된 종목(스캔이 끝난 뒤 한꺼번에 전송)
             try:
                 for ticker, name in us_stocks.items():
                     try:
                         rsi, close_p = self.fetch_us_4h_rsi(ticker, now, date_str)
                         if rsi is None:
                             skipped += 1
-                        elif rsi <= RSI_THRESHOLD and ticker not in self.state.get("alerted", []):
-                            self.send_telegram_alert(name, ticker, rsi, close_p, check_time_str)
-                            self.state["alerted"].append(ticker)
-                            self.save_state()
+                        elif rsi <= RSI_THRESHOLD:
+                            if ticker not in self.state["alerted"]:
+                                pending.append((name, ticker, rsi, close_p))
                     except Exception as e:
                         failed += 1
                         print(f" [조회 실패] {name}({ticker}): {e}")
             finally:
                 self.cache.prune(pd.Timestamp(date_str))
                 self.cache.save()  # 중간에 끊겨도 백필 진행분을 보존
+            if pending and in_alert_window(now, US_BAR_CLOSES):
+                for name, ticker, rsi, close_p in pending:
+                    self.send_telegram_alert(name, ticker, rsi, close_p, check_time_str)
+                    self.state["alerted"].append(ticker)
+                    self.save_state()
+            elif pending:
+                print(f" [알림 보류] 4시간봉 마감 직후 실행이 아니라 {len(pending)}종목 알림을 보내지 않았습니다(다음 봉 마감 때 재판단).")
             print(f" [스캔 완료] 대상 {len(us_stocks)}종목, 데이터 부족/백필 대기 {skipped}종목, 실패 {failed}종목")
 
         current_month = datetime.datetime.utcnow().month
