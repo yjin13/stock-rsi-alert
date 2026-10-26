@@ -1,6 +1,6 @@
 {
     "date": "2026-10-26",
-    "signal_count": 7,
+    "signal_count": 8,
     "summary_sent": false,
     "alerted": [
         "SOXL",
@@ -9,6 +9,7 @@
         "GOOGL",
         "META",
         "INTC",
-        "ARM"
+        "ARM",
+        "BOIL"
     ]
 }
