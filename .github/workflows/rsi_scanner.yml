@@ -42,6 +42,16 @@ jobs:
           key: kis-token-${{ github.run_id }}
           restore-keys: kis-token-
 
+      - name: 상태·캐시·로그 복원 (매 실행 커밋 대신 actions/cache로 실행 간 유지)
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/*_state.json
+            data/*_4h_cache.json
+            data/scanner_log.txt
+          key: rsi-data-${{ github.run_id }}
+          restore-keys: rsi-data-  # 가장 최근에 저장된 캐시를 복원(없으면 저장소에 커밋된 파일로 시작)
+
       - name: 🇰🇷 한국장 4시간봉 RSI 스캐너 실행
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -58,15 +68,35 @@ jobs:
           KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
         run: python -m bots.rsi_us_bot
 
-      - name: 한/미 실행 로그 및 상태 파일 통합 커밋
+      - name: 실행 로그 기록
+        if: always()  # 스캐너가 실패해도 상태·로그는 보존한다
         run: |
-          git config --global user.name "GitHub Actions Bot"
-          git config --global user.email "actions@github.com"
-          
           KST_TIME=$(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S KST')
           echo "[$KST_TIME] 🌐 한국/미국 RSI 스캔 완료" >> data/scanner_log.txt
           tail -n 100 data/scanner_log.txt > data/temp_log.txt && mv data/temp_log.txt data/scanner_log.txt
-          
-          git add -A
-          git commit -m "log: update KR & US scan status ($KST_TIME)" || exit 0
+
+      - name: 상태·캐시·로그 저장 (매 실행)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            data/*_state.json
+            data/*_4h_cache.json
+            data/scanner_log.txt
+          key: rsi-data-${{ github.run_id }}
+
+      - name: 하루 한 번 상태 파일 통합 커밋 (백업용, KST 15:30 이후 첫 실행)
+        if: always()
+        run: |
+          KST_HM=$(TZ='Asia/Seoul' date '+%H%M')
+          # 하루 마지막 스캔(KST 15:35) 이후에만 커밋. 그 외 실행은 캐시만 갱신한다.
+          if [ "$((10#$KST_HM))" -lt 1530 ]; then
+            echo "커밋 생략 (KST $KST_HM)"; exit 0
+          fi
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git add data/
+          git diff --cached --quiet && exit 0
+          git commit -m "log: update KR & US scan status ($(TZ='Asia/Seoul' date '+%Y-%m-%d %H:%M:%S KST'))"
+          git pull --rebase -X theirs || true
           git push || exit 0

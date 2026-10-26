@@ -22,7 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `expiry_state.json` — 토큰 만료 알림의 마지막 발송 날짜.
   - `scanner_log.txt` — 실행 로그(최근 100줄 유지).
   - `token_expiry.json` — 토큰 만료일 설정(`name`/`expires`/`renew`).
-- `.github/workflows/rsi_scanner.yml` — 세 스크립트를 순서대로 돌린 뒤 `data/` 안의 로그·상태·캐시를 봇 계정으로 커밋·푸시합니다. `concurrency`로 실행이 겹치지 않게 순차 처리합니다. 실행 트리거는 아래 "스케줄링" 참고.
+- `.github/workflows/rsi_scanner.yml` — 세 스크립트를 순서대로 돌립니다. `data/`의 상태·캐시·로그(`*_state.json`, `*_4h_cache.json`, `scanner_log.txt`)는 **매 실행마다 `actions/cache`(키 `rsi-data-<run_id>`, 최신 캐시 복원)로 이어 가고, git 커밋은 하루 한 번(KST 15:30 이후 첫 실행)만** 백업으로 봇 계정이 커밋·푸시합니다. 캐시가 7일 미사용 등으로 사라지면 마지막 커밋본으로 시작합니다. 스캐너가 실패해도 저장·로그 스텝은 `if: always()`로 실행됩니다. `concurrency`로 실행이 겹치지 않게 순차 처리합니다. 실행 트리거는 아래 "스케줄링" 참고.
 
 ## 명령어
 
