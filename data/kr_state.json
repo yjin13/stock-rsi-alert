@@ -1,7 +1,7 @@
 {
     "date": "2026-10-27",
     "signal_count": 26,
-    "summary_sent": false,
+    "summary_sent": true,
     "alerted": [
         "228790",
         "0115D0",
