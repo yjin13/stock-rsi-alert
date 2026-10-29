@@ -1,10 +1,8 @@
 {
-    "date": "2026-10-27",
-    "signal_count": 4,
+    "date": "2026-10-28",
+    "signal_count": 2,
     "summary_sent": true,
     "alerted": [
-        "BOIL",
-        "GOOGL",
         "META",
         "NFLX"
     ]
