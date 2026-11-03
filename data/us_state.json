@@ -1,17 +1,24 @@
 {
-    "date": "2026-10-30",
-    "signal_count": 10,
+    "date": "2026-11-02",
+    "signal_count": 17,
     "summary_sent": true,
     "alerted": [
         "CONL",
-        "NVDL",
         "FNGU",
         "BOIL",
-        "NVDA",
         "GOOGL",
+        "META",
         "INTC",
         "COIN",
         "HOOD",
-        "META"
+        "DDOG",
+        "QQQ",
+        "TQQQ",
+        "QLD",
+        "USD",
+        "NVDL",
+        "NVDA",
+        "AMD",
+        "ARM"
     ]
 }
