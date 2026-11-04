@@ -1,24 +1,12 @@
 {
-    "date": "2026-11-02",
-    "signal_count": 17,
+    "date": "2026-11-03",
+    "signal_count": 5,
     "summary_sent": true,
     "alerted": [
-        "CONL",
         "FNGU",
         "BOIL",
         "GOOGL",
-        "META",
         "INTC",
-        "COIN",
-        "HOOD",
-        "DDOG",
-        "QQQ",
-        "TQQQ",
-        "QLD",
-        "USD",
-        "NVDL",
-        "NVDA",
-        "AMD",
-        "ARM"
+        "PLTR"
     ]
 }
