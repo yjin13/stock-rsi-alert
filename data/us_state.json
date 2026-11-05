@@ -1,12 +1,10 @@
 {
-    "date": "2026-11-03",
-    "signal_count": 5,
+    "date": "2026-11-04",
+    "signal_count": 3,
     "summary_sent": true,
     "alerted": [
-        "FNGU",
-        "BOIL",
-        "GOOGL",
         "INTC",
-        "PLTR"
+        "PLTR",
+        "DDOG"
     ]
 }
