@@ -1,22 +1,12 @@
 {
-    "date": "2026-11-06",
-    "signal_count": 15,
+    "date": "2026-11-09",
+    "signal_count": 5,
     "summary_sent": true,
     "alerted": [
-        "TQQQ",
-        "QLD",
         "SOXX",
-        "SOXL",
-        "USD",
         "NVDL",
-        "FNGU",
         "NVDA",
-        "AVGO",
-        "MU",
         "INTC",
-        "ARM",
-        "PLTR",
-        "PANW",
         "DDOG"
     ]
 }
