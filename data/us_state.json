@@ -1,10 +1,15 @@
 {
-    "date": "2026-11-13",
-    "signal_count": 3,
+    "date": "2026-11-16",
+    "signal_count": 8,
     "summary_sent": true,
     "alerted": [
         "SOXX",
+        "CONL",
         "NVDL",
-        "NVDA"
+        "NVDA",
+        "COIN",
+        "MSTR",
+        "HOOD",
+        "DDOG"
     ]
 }
