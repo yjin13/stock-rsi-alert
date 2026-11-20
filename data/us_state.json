@@ -1,11 +1,23 @@
 {
-    "date": "2026-11-18",
-    "signal_count": 4,
+    "date": "2026-11-19",
+    "signal_count": 16,
     "summary_sent": true,
     "alerted": [
-        "CONL",
-        "NVDA",
+        "DIA",
+        "UPRO",
         "SOXX",
-        "COIN"
+        "CONL",
+        "NVDL",
+        "SCHD",
+        "NVDA",
+        "ADBE",
+        "COIN",
+        "MSTR",
+        "NFLX",
+        "JPM",
+        "SPY",
+        "PLTR",
+        "HOOD",
+        "DDOG"
     ]
 }
