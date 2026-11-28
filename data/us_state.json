@@ -1,11 +1,8 @@
 {
-    "date": "2026-11-25",
-    "signal_count": 4,
+    "date": "2026-11-27",
+    "signal_count": 1,
     "summary_sent": true,
     "alerted": [
-        "SOXX",
-        "CONL",
-        "COIN",
-        "MSTR"
+        "SOXX"
     ]
 }
